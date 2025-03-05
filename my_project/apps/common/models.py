@@ -52,8 +52,8 @@ class LoiBaiHatDongBo(models.Model):
     loi_doan = models.CharField(max_length=255)
     thoi_gian_bat_dau = models.DecimalField(max_digits=6, decimal_places=2)
     thoi_gian_ket_thuc = models.DecimalField(max_digits=6, decimal_places=2)
-
-
+    def __str__(self):
+        return self.loi_dong_bo_id
 
 class BaiHatTrongDanhSach(models.Model):
     bai_hat_trong_danh_sach_id =  models.AutoField(primary_key=True )  # Khóa chính, tự động tăng
@@ -114,3 +114,15 @@ class TaiXuong(models.Model):
 
     def __str__(self):
         return self.tai_xuong_id
+
+class LoaiBaiHat(models.Model):
+    loai_bai_hat_id = models.BigAutoField(primary_key=True )  # Khóa chính, tự động tăng
+    ten_loai = models.CharField(max_length=255, unique=True, help_text="Tên loại bài hát (Pop, Rock, Ballad,...)")
+    mo_ta = models.TextField(blank=True, null=True, help_text="Mô tả về loại bài hát")
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return self.loai_bai_hat_id
+

@@ -46,6 +46,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'apps.common',
     'apps.nguoidung',
+    'apps.loibaihatdongbo',
 ]
 
 MIDDLEWARE = [

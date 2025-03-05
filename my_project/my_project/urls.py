@@ -21,5 +21,7 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('nguoidung/' , include('apps.nguoidung.urls')),
     path('danhsachphat/' , include('apps.danhsachphat.urls')),
-    path('thembaihatvaodanhsachphat/' , include('apps.baihattrongdanhsach.urls'))
+    path('thembaihatvaodanhsachphat/' , include('apps.baihattrongdanhsach.urls')),
+    path('loibaihatdongbo/', include('apps.loibaihatdongbo.urls')),
+    path('loaibaihat/', include('apps.loaibaihat.urls'))
 ]
