@@ -20,5 +20,9 @@ from django.urls import path, include
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('nguoidung/' , include('apps.nguoidung.urls')),
-    path('danhsachphat/' , include('apps.danhsachphat.urls'))
+    path('danhsachphat/' , include('apps.danhsachphat.urls')),
+    path('thembaihatvaodanhsachphat/' , include('apps.baihattrongdanhsach.urls')),
+    path('baihat/', include('apps.baihat.urls')),
+    path('loibaihatdongbo/', include('apps.loibaihatdongbo.urls')),
+    path('loaibaihat/', include('apps.loaibaihat.urls'))
 ]

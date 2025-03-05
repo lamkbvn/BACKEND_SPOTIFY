@@ -68,7 +68,18 @@ INSTALLED_APPS = [
     'rest_framework_simplejwt.token_blacklist',
     'apps.common',
     'apps.nguoidung',
+    'storages',  # Thêm django-storages
+    'apps.loibaihatdongbo',
 ]
+
+
+# Cấu hình AWS S3
+AWS_ACCESS_KEY_ID = 'admin'
+AWS_SECRET_ACCESS_KEY = 'w$;8H?JFfwkAg8+'
+AWS_STORAGE_BUCKET_NAME = 'spotifycloud'
+AWS_S3_REGION_NAME = 'Asia Pacific (Sydney) ap-southeast-2'
+DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
+
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
@@ -109,8 +120,6 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'apps.nguoidung.middleware.JWTBlacklistMiddleware',
-    'apps.nguoidung.middleware.TokenRefreshMiddleware',
 ]
 
 ROOT_URLCONF = 'my_project.urls'
