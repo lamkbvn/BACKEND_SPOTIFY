@@ -47,6 +47,7 @@ INSTALLED_APPS = [
     'apps.common',
     'apps.nguoidung',
     'storages',  # Thêm django-storages
+    'apps.loibaihatdongbo',
 ]
 
 

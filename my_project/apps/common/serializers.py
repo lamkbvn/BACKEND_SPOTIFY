@@ -1,7 +1,10 @@
 from rest_framework import serializers
 from .models import NguoiDung
 from .models import DanhSachPhat
+from .models import LoiBaiHatDongBo
+from .models import LoaiBaiHat
 from ..common.models import BaiHat, BaiHatTrongDanhSach
+
 class NguoiDungSerializer(serializers.ModelSerializer):
     class Meta:
         model = NguoiDung
@@ -24,4 +27,14 @@ class BaiHatSerializer(serializers.ModelSerializer):
 class BaiHatTrongDanhSachSerializer(serializers.ModelSerializer):
     class Meta:
         model = BaiHatTrongDanhSach
+        fields = '__all__'
+
+class LoiBaiHatDongBoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = LoiBaiHatDongBo
+        fields = '__all__'
+
+class LoaiBaiHatSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = LoaiBaiHat
         fields = '__all__'
