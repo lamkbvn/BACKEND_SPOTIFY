@@ -1,10 +1,27 @@
+from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 from django.db import models
 
-class NguoiDung(models.Model):
-    nguoi_dung_id = models.BigAutoField(primary_key=True )  # Khóa chính, tự động tăng
+class NguoiDungManager(BaseUserManager):
+    """Quản lý người dùng tùy chỉnh"""
+    def create_user(self, email, mat_khau=None, **extra_fields):
+        if not email:
+            raise ValueError("Người dùng phải có địa chỉ email")
+        email = self.normalize_email(email)
+        user = self.model(email=email, **extra_fields)
+        user.set_password(mat_khau)  # Mã hóa mật khẩu
+        user.save(using=self._db)
+        return user
+
+    def create_superuser(self, email, mat_khau=None, **extra_fields):
+        extra_fields.setdefault("is_staff", True)
+        extra_fields.setdefault("is_superuser", True)
+        return self.create_user(email, mat_khau, **extra_fields)
+
+class NguoiDung(AbstractBaseUser, PermissionsMixin):
+    """Mô hình người dùng tùy chỉnh"""
+    nguoi_dung_id = models.BigAutoField(primary_key=True)  # Khóa chính
     email = models.EmailField(unique=True)
     so_dien_thoai = models.CharField(max_length=15, blank=True, null=True)
-    mat_khau = models.CharField(max_length=255)
     ten_hien_thi = models.CharField(max_length=100)
     avatar_url = models.URLField(blank=True, null=True)
     ngay_sinh = models.DateField(blank=True, null=True)
@@ -15,8 +32,20 @@ class NguoiDung(models.Model):
     ngay_tao = models.DateTimeField(auto_now_add=True)
     ngay_cap_nhat = models.DateTimeField(auto_now=True)
 
+    # Trường cần thiết để thay thế User mặc định
+    is_active = models.BooleanField(default=True)
+    is_staff = models.BooleanField(default=False)
+
+    objects = NguoiDungManager()
+
+    USERNAME_FIELD = "email"  # Đăng nhập bằng email
+    REQUIRED_FIELDS = ["ten_hien_thi"]  # Các trường bắt buộc khi tạo superuser
+
+    class Meta:
+        db_table = "nguoidung"  # Đổi tên bảng thành "nguoidung"
+
     def __str__(self):
-        return self.nguoi_dung_id
+        return self.email
 
 
 class BaiHat(models.Model):
@@ -131,4 +160,19 @@ class LoaiBaiHat(models.Model):
 
     def __str__(self):
         return self.loai_bai_hat_id
+
+class NgheSi(models.Model):
+    nghe_si_id = models.BigAutoField(primary_key=True)  # Khóa chính
+    ten_nghe_si = models.CharField(max_length=255, unique=True)  # Tên nghệ sĩ
+    tieu_su = models.TextField(blank=True, null=True)  # Thông tin về nghệ sĩ
+    anh_dai_dien = models.URLField(blank=True, null=True)  # Ảnh đại diện nghệ sĩ
+    ngay_sinh = models.DateField(blank=True, null=True)
+    quoc_gia = models.CharField(max_length=100, blank=True, null=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return self.ten_nghe_si
+
 
