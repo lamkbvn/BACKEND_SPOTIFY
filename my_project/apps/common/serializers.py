@@ -3,6 +3,7 @@ from .models import NguoiDung
 from .models import DanhSachPhat
 from .models import LoiBaiHatDongBo
 from .models import LoaiBaiHat
+from .models import NgheSi
 from ..common.models import BaiHat, BaiHatTrongDanhSach
 
 class NguoiDungSerializer(serializers.ModelSerializer):
@@ -37,4 +38,9 @@ class LoiBaiHatDongBoSerializer(serializers.ModelSerializer):
 class LoaiBaiHatSerializer(serializers.ModelSerializer):
     class Meta:
         model = LoaiBaiHat
+        fields = '__all__'
+
+class NgheSiSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = NgheSi
         fields = '__all__'

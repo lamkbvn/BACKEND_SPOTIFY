@@ -155,3 +155,18 @@ class LoaiBaiHat(models.Model):
     def __str__(self):
         return self.loai_bai_hat_id
 
+class NgheSi(models.Model):
+    nghe_si_id = models.BigAutoField(primary_key=True)  # Khóa chính
+    ten_nghe_si = models.CharField(max_length=255, unique=True)  # Tên nghệ sĩ
+    tieu_su = models.TextField(blank=True, null=True)  # Thông tin về nghệ sĩ
+    anh_dai_dien = models.URLField(blank=True, null=True)  # Ảnh đại diện nghệ sĩ
+    ngay_sinh = models.DateField(blank=True, null=True)
+    quoc_gia = models.CharField(max_length=100, blank=True, null=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return self.ten_nghe_si
+
+

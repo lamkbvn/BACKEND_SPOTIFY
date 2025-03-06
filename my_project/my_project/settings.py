@@ -30,7 +30,7 @@ SECRET_KEY = 'django-insecure-^5ykhf20%@!1rrc_j!p8(0!#5i2fv9f1rswm^8mjo+#qqq@t__
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
 
 AUTH_USER_MODEL = "common.NguoiDung"  # Đổi "ten_app" thành tên app của bạn
 
@@ -70,6 +70,7 @@ INSTALLED_APPS = [
     'apps.nguoidung',
     'storages',  # Thêm django-storages
     'apps.loibaihatdongbo',
+    'apps.nghesi',
 ]
 
 
@@ -151,7 +152,7 @@ DATABASES = {
         'ENGINE': 'django.db.backends.mysql',  # Sử dụng MySQL
         'NAME': 'spotify',  # Tên database của bạn
         'USER': 'root',  # Tên user của MySQL
-        'PASSWORD': '',  # Mật khẩu của MySQL
+        'PASSWORD': '12345abc',  # Mật khẩu của MySQL
         'HOST': 'localhost',  # Nếu dùng máy chủ từ xa, thay bằng IP hoặc domain
         'PORT': '3306',  # Cổng mặc định của MySQL
         'OPTIONS': {
