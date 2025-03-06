@@ -42,6 +42,12 @@ class DanhSachPhat(models.Model):
     la_cong_khai = models.BooleanField(default=True)
     ngay_tao = models.DateTimeField(auto_now_add=True)
     tong_thoi_luong = models.IntegerField(default=0)  # Tính bằng giây
+    so_thu_tu = models.IntegerField(null=True)
+    anh_danh_sach = models.URLField(default="http://localhost:5173/uifaces-popular-image%20(1).jpg")
+    so_nguoi_theo_doi = models.IntegerField(default=0)
+
+    class Meta:
+        ordering = ['so_thu_tu']  # Mặc định sắp xếp theo thứ tự
 
     def __str__(self):
         return self.dach_sach_phat_id
