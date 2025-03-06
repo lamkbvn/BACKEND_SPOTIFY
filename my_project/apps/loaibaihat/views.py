@@ -2,13 +2,15 @@ from django.shortcuts import render
 
 # Create your views here.
 from rest_framework import status
+from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view, permission_classes
 from ..common.models import LoaiBaiHat
 from ..common.serializers import LoaiBaiHatSerializer
 
 # Thêm loại bài hát
 @api_view(['POST'])
+@permission_classes([AllowAny])
 def them_loaibaihat(request):
     serializer = LoaiBaiHatSerializer(data=request.data)
     if serializer.is_valid():
@@ -18,6 +20,7 @@ def them_loaibaihat(request):
 
 # Lấy danh sách tất cả loại bài hát
 @api_view(['GET'])
+@permission_classes([AllowAny])
 def get_loaibaihat(request):
     danh_sach = LoaiBaiHat.objects.all()
     serializer = LoaiBaiHatSerializer(danh_sach, many=True)
@@ -25,6 +28,7 @@ def get_loaibaihat(request):
 
 # Lấy chi tiết loại bài hát theo ID
 @api_view(['GET'])
+@permission_classes([AllowAny])
 def get_loaibaihat_by_id(request, id):
     try:
         loai_bai_hat = LoaiBaiHat.objects.get(pk=id)
@@ -35,6 +39,7 @@ def get_loaibaihat_by_id(request, id):
 
 # Cập nhật loại bài hát
 @api_view(['PUT'])
+@permission_classes([AllowAny])
 def update_loaibaihat(request, id):
     try:
         loai_bai_hat = LoaiBaiHat.objects.get(pk=id)
@@ -49,6 +54,7 @@ def update_loaibaihat(request, id):
 
 # Xóa loại bài hát
 @api_view(['DELETE'])
+@permission_classes([AllowAny])
 def delete_loaibaihat(request, id):
     try:
         loai_bai_hat = LoaiBaiHat.objects.get(pk=id)
