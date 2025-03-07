@@ -64,7 +64,7 @@ class BaiHat(models.Model):
 
 
 class DanhSachPhat(models.Model):
-    dach_sach_phat_id =  models.BigAutoField(primary_key=True )  # Khóa chính, tự động tăng
+    danh_sach_phat_id =  models.BigAutoField(primary_key=True )  # Khóa chính, tự động tăng
     nguoi_dung_id = models.ForeignKey(NguoiDung, on_delete=models.CASCADE)
     ten_danh_sach = models.CharField(max_length=255)
     mo_ta = models.TextField(blank=True, null=True)
