@@ -34,7 +34,7 @@ ALLOWED_HOSTS = ['*']
 
 AUTH_USER_MODEL = "common.NguoiDung"  # Đổi "ten_app" thành tên app của bạn
 
-
+CORS_ALLOW_ALL_ORIGINS = True
 # Application definition
 
 
@@ -63,6 +63,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'corsheaders',
     'rest_framework',
     'rest_framework_simplejwt',
     'rest_framework_simplejwt.token_blacklist',
@@ -115,6 +116,7 @@ SIMPLE_JWT = {
 }
 
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
