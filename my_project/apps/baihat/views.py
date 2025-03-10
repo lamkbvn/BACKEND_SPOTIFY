@@ -1,11 +1,13 @@
 from rest_framework import status
 from rest_framework.response import Response
-from rest_framework.decorators import api_view
+from rest_framework.permissions import AllowAny
+from rest_framework.decorators import api_view, permission_classes
 from ..common.models import BaiHat
 from ..common.serializers import BaiHatSerializer
 
 # Tạo bài hát mới
 @api_view(['POST'])
+@permission_classes([AllowAny])
 def them_baihat(request):
     serializer = BaiHatSerializer(data=request.data)
     if serializer.is_valid():
@@ -15,6 +17,7 @@ def them_baihat(request):
 
 # Lấy tất cả bài hát
 @api_view(['GET'])
+@permission_classes([AllowAny])
 def get_baihat(request):
     bai_hats = BaiHat.objects.all()
     serializer = BaiHatSerializer(bai_hats, many=True)
@@ -22,6 +25,7 @@ def get_baihat(request):
 
 # Lấy bài hát theo ID
 @api_view(['GET'])
+@permission_classes([AllowAny])
 def get_baihat_by_id(request, id):
     try:
         bai_hat = BaiHat.objects.get(pk=id)
@@ -33,6 +37,7 @@ def get_baihat_by_id(request, id):
 
 #Lấy lời bài hát theo id bài hát
 @api_view(['GET'])
+@permission_classes([AllowAny])
 def get_loi_bai_hat(request, id):
     try:
         # Tìm bài hát theo ID
@@ -45,6 +50,7 @@ def get_loi_bai_hat(request, id):
 
 # Cập nhật bài hát
 @api_view(['PUT'])
+@permission_classes([AllowAny])
 def update_baihat(request, id):
     try:
         bai_hat = BaiHat.objects.get(pk=id)
@@ -59,6 +65,7 @@ def update_baihat(request, id):
 
 # Xóa bài hát
 @api_view(['DELETE'])
+@permission_classes([AllowAny])
 def delete_baihat(request, id):
     try:
         bai_hat = BaiHat.objects.get(pk=id)
