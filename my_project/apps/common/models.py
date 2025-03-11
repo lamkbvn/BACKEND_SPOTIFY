@@ -64,13 +64,19 @@ class BaiHat(models.Model):
 
 
 class DanhSachPhat(models.Model):
-    dach_sach_phat_id =  models.BigAutoField(primary_key=True )  # Khóa chính, tự động tăng
+    danh_sach_phat_id =  models.BigAutoField(primary_key=True )  # Khóa chính, tự động tăng
     nguoi_dung_id = models.ForeignKey(NguoiDung, on_delete=models.CASCADE)
     ten_danh_sach = models.CharField(max_length=255)
     mo_ta = models.TextField(blank=True, null=True)
     la_cong_khai = models.BooleanField(default=True)
     ngay_tao = models.DateTimeField(auto_now_add=True)
     tong_thoi_luong = models.IntegerField(default=0)  # Tính bằng giây
+    so_thu_tu = models.IntegerField(null=True)
+    anh_danh_sach = models.URLField(default="http://localhost:5173/uifaces-popular-image%20(1).jpg")
+    so_nguoi_theo_doi = models.IntegerField(default=0)
+
+    class Meta:
+        ordering = ['so_thu_tu']  # Mặc định sắp xếp theo thứ tự
 
     def __str__(self):
         return self.dach_sach_phat_id
@@ -154,4 +160,30 @@ class LoaiBaiHat(models.Model):
 
     def __str__(self):
         return self.loai_bai_hat_id
+
+class NgheSi(models.Model):
+    nghe_si_id = models.BigAutoField(primary_key=True)  # Khóa chính
+    ten_nghe_si = models.CharField(max_length=255, unique=True)  # Tên nghệ sĩ
+    tieu_su = models.TextField(blank=True, null=True)  # Thông tin về nghệ sĩ
+    anh_dai_dien = models.URLField(blank=True, null=True)  # Ảnh đại diện nghệ sĩ
+    ngay_sinh = models.DateField(blank=True, null=True)
+    quoc_gia = models.CharField(max_length=100, blank=True, null=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return self.ten_nghe_si
+    
+class BangXepHangBaiHat(models.Model):
+    bang_xep_hang_id = models.BigAutoField(primary_key=True)
+    bai_hat = models.ForeignKey(BaiHat, on_delete=models.CASCADE)
+    loai_bang_xep_hang = models.CharField(max_length=50)  # Ví dụ: "nghe_nhieu", "yeu_thich", "tai_xuong"
+    vi_tri = models.IntegerField()  # Vị trí trong bảng xếp hạng (1, 2, 3,...)
+    gia_tri = models.IntegerField()  # Giá trị xếp hạng (lượt nghe, lượt thích, v.v.)
+    khoang_thoi_gian = models.CharField(max_length=20)  # "ngay", "tuan", "thang"
+    ngay_cap_nhat = models.DateTimeField(auto_now=True)
+    def __str__(self):
+        return self.bang_xep_hang_id
+
 

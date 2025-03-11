@@ -1,11 +1,13 @@
 from rest_framework import status
+from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view, permission_classes
 from ..common.models import DanhSachPhat
 from ..common.serializers import DanhSachPhatSerializer
 
 # Tạo danh sách phạt (đã có)
 @api_view(['POST'])
+@permission_classes([AllowAny])
 def them_danhsachphat(request):
     serializer = DanhSachPhatSerializer(data=request.data)
     if serializer.is_valid():
@@ -15,6 +17,7 @@ def them_danhsachphat(request):
 
 # Lấy danh sách phạt (GET all)
 @api_view(['GET'])
+@permission_classes([AllowAny])
 def get_danhsachphat(request):
     danh_sach = DanhSachPhat.objects.all()
     serializer = DanhSachPhatSerializer(danh_sach, many=True)
@@ -22,6 +25,7 @@ def get_danhsachphat(request):
 
 # Lấy chi tiết danh sách phạt (GET by ID)
 @api_view(['GET'])
+@permission_classes([AllowAny])
 def get_danhsachphat_by_id(request, id):
     try:
         danh_sach = DanhSachPhat.objects.get(pk=id)
