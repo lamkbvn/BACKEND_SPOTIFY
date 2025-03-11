@@ -26,4 +26,5 @@ urlpatterns = [
     path('loibaihatdongbo/', include('apps.loibaihatdongbo.urls')),
     path('loaibaihat/', include('apps.loaibaihat.urls')),
     path('api/', include('apps.nghesi.urls')),
+    path('bxh/' , include('apps.bangxephangbaihat.urls')),
 ]

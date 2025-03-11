@@ -174,5 +174,16 @@ class NgheSi(models.Model):
 
     def __str__(self):
         return self.ten_nghe_si
+    
+class BangXepHangBaiHat(models.Model):
+    bang_xep_hang_id = models.BigAutoField(primary_key=True)
+    bai_hat = models.ForeignKey(BaiHat, on_delete=models.CASCADE)
+    loai_bang_xep_hang = models.CharField(max_length=50)  # Ví dụ: "nghe_nhieu", "yeu_thich", "tai_xuong"
+    vi_tri = models.IntegerField()  # Vị trí trong bảng xếp hạng (1, 2, 3,...)
+    gia_tri = models.IntegerField()  # Giá trị xếp hạng (lượt nghe, lượt thích, v.v.)
+    khoang_thoi_gian = models.CharField(max_length=20)  # "ngay", "tuan", "thang"
+    ngay_cap_nhat = models.DateTimeField(auto_now=True)
+    def __str__(self):
+        return self.bang_xep_hang_id
 
 

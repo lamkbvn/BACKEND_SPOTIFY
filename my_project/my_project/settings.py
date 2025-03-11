@@ -155,7 +155,7 @@ DATABASES = {
         'ENGINE': 'django.db.backends.mysql',  # Sử dụng MySQL
         'NAME': 'spotify',  # Tên database của bạn
         'USER': 'root',  # Tên user của MySQL
-        'PASSWORD': '12345abc',  # Mật khẩu của MySQL
+        'PASSWORD': '',  # Mật khẩu của MySQL
         'HOST': 'localhost',  # Nếu dùng máy chủ từ xa, thay bằng IP hoặc domain
         'PORT': '3306',  # Cổng mặc định của MySQL
         'OPTIONS': {
