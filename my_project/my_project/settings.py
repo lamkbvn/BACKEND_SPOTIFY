@@ -30,11 +30,11 @@ SECRET_KEY = 'django-insecure-^5ykhf20%@!1rrc_j!p8(0!#5i2fv9f1rswm^8mjo+#qqq@t__
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
 
 AUTH_USER_MODEL = "common.NguoiDung"  # Đổi "ten_app" thành tên app của bạn
 
-
+CORS_ALLOW_ALL_ORIGINS = True
 # Application definition
 
 
@@ -63,6 +63,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'corsheaders',
     'rest_framework',
     'rest_framework_simplejwt',
     'rest_framework_simplejwt.token_blacklist',
@@ -70,6 +71,8 @@ INSTALLED_APPS = [
     'apps.nguoidung',
     'storages',  # Thêm django-storages
     'apps.loibaihatdongbo',
+    'apps.nghesi',
+    'apps.loaibaihat',
 ]
 
 
@@ -77,7 +80,7 @@ INSTALLED_APPS = [
 AWS_ACCESS_KEY_ID = 'admin'
 AWS_SECRET_ACCESS_KEY = 'w$;8H?JFfwkAg8+'
 AWS_STORAGE_BUCKET_NAME = 'spotifycloud'
-AWS_S3_REGION_NAME = 'Asia Pacific (Sydney) ap-southeast-2'
+AWS_S3_REGION_NAME = 'ap-southeast-2'
 DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
 
 
@@ -113,6 +116,7 @@ SIMPLE_JWT = {
 }
 
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
