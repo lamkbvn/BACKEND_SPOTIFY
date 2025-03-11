@@ -3,9 +3,12 @@ from rest_framework.response import Response
 from rest_framework.decorators import api_view
 from ..common.models import NgheSi
 from ..common.serializers import NgheSiSerializer
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import AllowAny
 
 # Tạo nghệ sĩ mới
 @api_view(['POST'])
+@permission_classes([AllowAny])
 def them_nghesi(request):
     serializer = NgheSiSerializer(data=request.data)
     if serializer.is_valid():
@@ -15,6 +18,7 @@ def them_nghesi(request):
 
 # Lấy danh sách tất cả nghệ sĩ
 @api_view(['GET'])
+@permission_classes([AllowAny])
 def get_nghesi(request):
     nghesi_list = NgheSi.objects.all()
     serializer = NgheSiSerializer(nghesi_list, many=True)
@@ -22,6 +26,7 @@ def get_nghesi(request):
 
 # Lấy nghệ sĩ theo ID
 @api_view(['GET'])
+@permission_classes([AllowAny])
 def get_nghesi_by_id(request, id):
     try:
         nghesi = NgheSi.objects.get(pk=id)
@@ -32,6 +37,7 @@ def get_nghesi_by_id(request, id):
 
 # Cập nhật thông tin nghệ sĩ
 @api_view(['PUT'])
+@permission_classes([AllowAny])
 def update_nghesi(request, id):
     try:
         nghesi = NgheSi.objects.get(pk=id)
@@ -46,6 +52,7 @@ def update_nghesi(request, id):
 
 # Xóa nghệ sĩ
 @api_view(['DELETE'])
+@permission_classes([AllowAny])
 def delete_nghesi(request, id):
     try:
         nghesi = NgheSi.objects.get(pk=id)
