@@ -73,6 +73,7 @@ INSTALLED_APPS = [
     'apps.loibaihatdongbo',
     'apps.nghesi',
     'apps.loaibaihat',
+    'apps.album',
 ]
 
 

@@ -8,7 +8,7 @@ from rest_framework.decorators import api_view
 from django.contrib.auth.hashers import check_password, make_password
 from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
 from rest_framework_simplejwt.tokens import RefreshToken, AccessToken
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from rest_framework.decorators import permission_classes
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework.decorators import authentication_classes
@@ -264,3 +264,35 @@ def password_reset_confirm(request, uidb64, token):
             return Response({'error': 'Invalid or expired token'}, status=status.HTTP_400_BAD_REQUEST)
     except (NguoiDung.DoesNotExist, ValueError):
         return Response({'error': 'Invalid request'}, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['GET'])
+@permission_classes([IsAdminUser])  # Dùng IsAdminUser thay cho AllowAny để chỉ admin mới có thể xem danh sách
+def danh_sach_nguoi_dung(request):
+    loai = request.query_params.get('loai', None)  # Lọc theo loại người dùng (premium hoặc thường)
+
+    if loai == "premium":
+        nguoi_dung = NguoiDung.objects.filter(la_premium=True)
+    elif loai == "thuong":
+        nguoi_dung = NguoiDung.objects.filter(la_premium=False)
+    else:
+        nguoi_dung = NguoiDung.objects.all()
+
+    serializer = NguoiDungSerializer(nguoi_dung, many=True)
+    return Response(serializer.data, status=status.HTTP_200_OK)
+
+@api_view(['GET'])
+@permission_classes([IsAdminUser])  # Dùng IsAdminUser thay cho AllowAny để chỉ admin mới có thể chi tiết người dùng
+def chi_tiet_nguoi_dung(request, nguoi_dung_id):
+    nguoi_dung = get_object_or_404(NguoiDung, pk=nguoi_dung_id)
+    serializer = NguoiDungSerializer(nguoi_dung)
+    return Response(serializer.data, status=status.HTTP_200_OK)
+
+@api_view(['PATCH'])
+@permission_classes([IsAdminUser])  # Dùng IsAdminUser thay cho AllowAny để chỉ admin mới có thể chi tiết người dùng
+def khoa_tai_khoan(request, nguoi_dung_id):
+    nguoi_dung = get_object_or_404(NguoiDung, pk=nguoi_dung_id)
+
+    nguoi_dung.is_active = False  # Vô hiệu hóa tài khoản
+    nguoi_dung.save()
+
+    return Response({"message": f"Tài khoản {nguoi_dung.email} đã bị khóa"}, status=status.HTTP_200_OK)
