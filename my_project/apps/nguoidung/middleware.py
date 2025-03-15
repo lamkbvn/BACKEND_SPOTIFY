@@ -70,3 +70,12 @@ class TokenRefreshMiddleware:
 
         # Nếu không làm mới token, tiếp tục xử lý bình thường
         return self.get_response(request)
+
+from django.utils.deprecation import MiddlewareMixin
+from django.http import JsonResponse
+
+class AttachTokenMiddleware(MiddlewareMixin):
+    def process_request(self, request):
+        access_token = request.COOKIES.get("access_token")
+        if access_token:
+            request.META["HTTP_AUTHORIZATION"] = f"Bearer {access_token}"

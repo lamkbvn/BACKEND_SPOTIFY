@@ -99,7 +99,7 @@ REST_FRAMEWORK = {
 from datetime import timedelta
 
 SIMPLE_JWT = {
-    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=2),
+    "ACCESS_TOKEN_LIFETIME": timedelta(days=7),
     "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
     "ROTATE_REFRESH_TOKENS": True,  # Tạo refresh token mới khi dùng refresh
     "BLACKLIST_AFTER_ROTATION": True,  # Đưa refresh token cũ vào blacklist sau khi refresh
@@ -124,6 +124,10 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'apps.nguoidung.middleware.JWTBlacklistMiddleware',
+    'apps.nguoidung.middleware.TokenRefreshMiddleware',
+    'apps.nguoidung.middleware.AttachTokenMiddleware',
+
 ]
 
 ROOT_URLCONF = 'my_project.urls'
