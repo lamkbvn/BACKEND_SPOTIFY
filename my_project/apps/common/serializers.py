@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import NguoiDung
+from .models import NguoiDung, Album
 from .models import DanhSachPhat
 from .models import LoiBaiHatDongBo
 from .models import LoaiBaiHat
@@ -50,3 +50,8 @@ class BangXepHangBaiHatSerializer(serializers.ModelSerializer):
     class Meta:
         model = BangXepHangBaiHat
         fields = '__all__'  # Lấy tất cả các trường của model
+
+class AlbumSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Album
+        fields = '__all__'

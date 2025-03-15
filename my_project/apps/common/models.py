@@ -48,11 +48,41 @@ class NguoiDung(AbstractBaseUser, PermissionsMixin):
         return self.email
 
 
+class NgheSi(models.Model):
+    nghe_si_id = models.BigAutoField(primary_key=True)  # Khóa chính
+    ten_nghe_si = models.CharField(max_length=255, unique=True)  # Tên nghệ sĩ
+    tieu_su = models.TextField(blank=True, null=True)  # Thông tin về nghệ sĩ
+    anh_dai_dien = models.URLField(blank=True, null=True)  # Ảnh đại diện nghệ sĩ
+    ngay_sinh = models.DateField(blank=True, null=True)
+    quoc_gia = models.CharField(max_length=100, blank=True, null=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return self.ten_nghe_si
+
+
+class Album(models.Model):
+    album_id = models.BigAutoField(primary_key=True)  # Khóa chính, tự động tăng
+    ten_album = models.CharField(max_length=255, unique=True)  # Tên album
+    nghe_si = models.ForeignKey(NgheSi, on_delete=models.CASCADE, related_name="albums")  # Nghệ sĩ sở hữu album
+    anh_bia = models.URLField(blank=True, null=True)  # Ảnh bìa album
+    ngay_phat_hanh = models.DateField()  # Ngày phát hành album
+    the_loai = models.CharField(max_length=100)  # Thể loại album
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.ten_album} - {self.nghe_si.ten_nghe_si}"
+
+
 class BaiHat(models.Model):
-    bai_hat_id  =  models.BigAutoField(primary_key=True )  # Khóa chính, tự động tăng
+    bai_hat_id = models.BigAutoField(primary_key=True)  # Khóa chính, tự động tăng
     ten_bai_hat = models.CharField(max_length=255)
-    nghe_si = models.CharField(max_length=255)
-    ten_album = models.CharField(max_length=255, blank=True, null=True)
+    nghe_si = models.ForeignKey(NgheSi, on_delete=models.CASCADE, related_name="bai_hat")  # Nghệ sĩ
+    album = models.ForeignKey(Album, on_delete=models.SET_NULL, null=True, blank=True, related_name="bai_hat")  # Album chứa bài hát
     the_loai = models.CharField(max_length=100)
     duong_dan = models.URLField()
     loi_bai_hat = models.TextField(blank=True, null=True)
@@ -60,7 +90,7 @@ class BaiHat(models.Model):
     ngay_phat_hanh = models.DateField()
 
     def __str__(self):
-        return self.bai_hat_id
+        return f"{self.ten_bai_hat} - {self.nghe_si.ten_nghe_si}"
 
 
 class DanhSachPhat(models.Model):
@@ -161,20 +191,6 @@ class LoaiBaiHat(models.Model):
     def __str__(self):
         return self.loai_bai_hat_id
 
-class NgheSi(models.Model):
-    nghe_si_id = models.BigAutoField(primary_key=True)  # Khóa chính
-    ten_nghe_si = models.CharField(max_length=255, unique=True)  # Tên nghệ sĩ
-    tieu_su = models.TextField(blank=True, null=True)  # Thông tin về nghệ sĩ
-    anh_dai_dien = models.URLField(blank=True, null=True)  # Ảnh đại diện nghệ sĩ
-    ngay_sinh = models.DateField(blank=True, null=True)
-    quoc_gia = models.CharField(max_length=100, blank=True, null=True)
-
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    def __str__(self):
-        return self.ten_nghe_si
-    
 class BangXepHangBaiHat(models.Model):
     bang_xep_hang_id = models.BigAutoField(primary_key=True)
     bai_hat = models.ForeignKey(BaiHat, on_delete=models.CASCADE)
@@ -185,5 +201,4 @@ class BangXepHangBaiHat(models.Model):
     ngay_cap_nhat = models.DateTimeField(auto_now=True)
     def __str__(self):
         return self.bang_xep_hang_id
-
 
