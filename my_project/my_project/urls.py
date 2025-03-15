@@ -27,4 +27,5 @@ urlpatterns = [
     path('loaibaihat/', include('apps.loaibaihat.urls')),
     path('api/', include('apps.nghesi.urls')),
     path('bxh/' , include('apps.bangxephangbaihat.urls')),
+    path('album/', include('apps.album.urls')),
 ]
