@@ -63,7 +63,7 @@ def them_nguoi_dung(request):
     serializer = NguoiDungSerializer(data=request.data)
     if serializer.is_valid():
         serializer.save()
-        return Response({"message": "Người dùng đã được thêm thành công!", "data": serializer.data},
+        return Response({"message": "Người dùng đã được thêm thành công!", "data": serializer.data , "status": status.HTTP_201_CREATED},
                         status=status.HTTP_201_CREATED)
 
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -83,7 +83,7 @@ def cap_nhat_nguoi_dung(request):
 
     if so_dien_thoai_moi and NguoiDung.objects.filter(so_dien_thoai=so_dien_thoai_moi).exclude(
             pk=nguoi_dung.nguoi_dung_id).exists():
-        return Response({"error": "Số điện thoại đã được sử dụng bởi người dùng khác!"}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({"error": "Số điện thoại đã được sử dụng bởi người dùng khác!" , "status" : status.HTTP_400_BAD_REQUEST}, status=status.HTTP_400_BAD_REQUEST)
 
     # Nếu có mật khẩu mới, mã hóa trước khi cập nhật
     data_update = request.data.copy()
@@ -93,7 +93,7 @@ def cap_nhat_nguoi_dung(request):
     serializer = NguoiDungSerializer(nguoi_dung, data=data_update, partial=True)
     if serializer.is_valid():
         serializer.save()
-        return Response({"message": "Cập nhật thông tin thành công!", "data": serializer.data}, status=status.HTTP_200_OK)
+        return Response({"message": "Cập nhật thông tin thành công!", "data": serializer.data , "status" : status.HTTP_200_OK}, status=status.HTTP_200_OK)
 
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -109,10 +109,10 @@ def login(request):
     try:
         nguoidung = NguoiDung.objects.get(email=email)
     except NguoiDung.DoesNotExist:
-        return Response({'error': 'Không tìm thấy tài khoản với email này'}, status=404)
+        return Response({'error': 'Không tìm thấy tài khoản với email này' ,"status" : status.HTTP_404_NOT_FOUND}, status=404)
 
     if not check_password(password, nguoidung.password):  # Đảm bảo bạn lưu mật khẩu đã mã hóa trong DB
-        return Response({'error': 'Sai mật khẩu'}, status=400)
+        return Response({'error': 'Sai mật khẩu' ,"status" : status.HTTP_400_BAD_REQUEST}, status=400)
     # Tạo JWT token
     refresh = RefreshToken.for_user(nguoidung)
     access_token = str(refresh.access_token)
@@ -125,7 +125,7 @@ def login(request):
             'nguoi_dung_id': nguoidung.nguoi_dung_id,
             'ten_hien_thi': nguoidung.ten_hien_thi,
             'email': nguoidung.email
-    } , status = 201)
+    } , status = status.HTTP_201_CREATED)
 
     response.set_cookie(
             key="refresh_token",
@@ -148,7 +148,7 @@ def login(request):
     return response
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated])
+@permission_classes([AllowAny])
 def logout(request):
     try:
         refresh_token = request.COOKIES.get('refresh_token')
@@ -160,12 +160,12 @@ def logout(request):
             token = RefreshToken(refresh_token)
             token.blacklist()
         except Exception:
-            return Response({'error': 'Refresh Token không hợp lệ hoặc đã hết hạn'}, status=400)
+            return Response({'error': 'Refresh Token không hợp lệ hoặc đã hết hạn' ,"status" : status.HTTP_400_BAD_REQUEST}, status=400)
 
         # Lấy access token từ header
         auth_header = request.headers.get("Authorization")
         if not auth_header or not auth_header.startswith("Bearer "):
-            return Response({'error': 'Không có Access Token'}, status=400)
+            return Response({'error': 'Không có Access Token' ,"status" : status.HTTP_400_BAD_REQUEST}, status=400)
 
         access_token_str = auth_header.split(" ")[1]
 
@@ -174,9 +174,9 @@ def logout(request):
             access_token = AccessToken(access_token_str)
             BlacklistedAccessToken.objects.create(token_access=access_token_str)
         except ValidationError:
-            return Response({'error': 'Access Token không hợp lệ'}, status=400)
+            return Response({'error': 'Access Token không hợp lệ' , "status" : status.HTTP_400_BAD_REQUEST}, status=400)
 
-        return Response({'message': 'Đăng xuất thành công'}, status=200)
+        return Response({'message': 'Đăng xuất thành công' , "status" : status.HTTP_200_OK}, status=200)
 
     except Exception as e:
         return Response({'error': f'Lỗi hệ thống: {str(e)}'}, status=500)
@@ -190,13 +190,13 @@ def refresh_token(request):
     refresh = request.COOKIES.get('refresh_token')
 
     if not refresh:
-        return Response({"error": "Vui lòng cung cấp refresh token"}, status=400)
+        return Response({"error": "Vui lòng cung cấp refresh token" , "status" : status.HTTP_400_BAD_REQUEST}, status=400)
 
     try:
         # Lấy access token từ header
         auth_header = request.headers.get("Authorization")
         if not auth_header or not auth_header.startswith("Bearer "):
-            return Response({'error': 'Không có Access Token'}, status=400)
+            return Response({'error': 'Không có Access Token' , "status" : status.HTTP_400_BAD_REQUEST}, status=400)
 
         access_token_str = auth_header.split(" ")[1]
 
@@ -205,13 +205,13 @@ def refresh_token(request):
             access_token = AccessToken(access_token_str)
             BlacklistedAccessToken.objects.create(token_access=access_token_str)
         except ValidationError:
-            return Response({'error': 'Access Token không hợp lệ'}, status=400)
+            return Response({'error': 'Access Token không hợp lệ' , "status" : status.HTTP_400_BAD_REQUEST}, status=400)
         # Lấy access token mới từ refresh token
         refresh_token = RefreshToken(refresh)
         access_token = str(refresh_token.access_token)
         return Response({"access": access_token}, status=200)
     except Exception as e:
-        return Response({"error": "Refresh token không hợp lệ hoặc đã hết hạn"}, status=400)
+        return Response({"error": "Refresh token không hợp lệ hoặc đã hết hạn", "status" : status.HTTP_400_BAD_REQUEST}, status=400)
 
 
 from django.contrib.auth.models import User
@@ -243,9 +243,9 @@ def request_password_reset(request):
             fail_silently=False,
         )
 
-        return Response({'message': 'Password reset link sent'}, status=status.HTTP_200_OK)
+        return Response({'message': 'Password reset link sent' , "status" : status.HTTP_200_OK}, status=status.HTTP_200_OK)
     except NguoiDung.DoesNotExist:
-        return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+        return Response({'error': 'User not found' , "status" : status.HTTP_404_NOT_FOUND}, status=status.HTTP_404_NOT_FOUND)
 
 
 @api_view(['POST'])
@@ -259,8 +259,8 @@ def password_reset_confirm(request, uidb64, token):
             new_password = request.data.get('password')
             user.set_password(new_password)
             user.save()
-            return Response({'message': 'Password reset successful'}, status=status.HTTP_200_OK)
+            return Response({'message': 'Password reset successful' , "status" : status.HTTP_200_OK}, status=status.HTTP_200_OK)
         else:
-            return Response({'error': 'Invalid or expired token'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'error': 'Invalid or expired token' , "status" : status.HTTP_400_BAD_REQUEST}, status=status.HTTP_400_BAD_REQUEST)
     except (NguoiDung.DoesNotExist, ValueError):
-        return Response({'error': 'Invalid request'}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({'error': 'Invalid request' , "status" : status.HTTP_400_BAD_REQUEST}, status=status.HTTP_400_BAD_REQUEST)
