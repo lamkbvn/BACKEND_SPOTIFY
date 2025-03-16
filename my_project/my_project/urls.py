@@ -28,4 +28,5 @@ urlpatterns = [
     path('api/', include('apps.nghesi.urls')),
     path('bxh/' , include('apps.bangxephangbaihat.urls')),
     path('album/', include('apps.album.urls')),
+    path('api/', include('payment.urls')),
 ]
