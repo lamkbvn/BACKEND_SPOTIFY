@@ -15,16 +15,24 @@ class NguoiDungManager(BaseUserManager):
     def create_superuser(self, email, mat_khau=None, **extra_fields):
         extra_fields.setdefault("is_staff", True)
         extra_fields.setdefault("is_superuser", True)
+
+        if not extra_fields.get("is_staff"):
+            raise ValueError("Superuser phải có is_staff=True.")
+        if not extra_fields.get("is_superuser"):
+            raise ValueError("Superuser phải có is_superuser=True.")
+
         return self.create_user(email, mat_khau, **extra_fields)
+
 
 class NguoiDung(AbstractBaseUser, PermissionsMixin):
     """Mô hình người dùng tùy chỉnh"""
     nguoi_dung_id = models.BigAutoField(primary_key=True)  # Khóa chính
     email = models.EmailField(unique=True)
-    so_dien_thoai = models.CharField(max_length=15, blank=True, null=True)
-    ten_hien_thi = models.CharField(max_length=100)
+    so_dien_thoai = models.CharField(max_length=15, blank=True, null=False)
+    ten_hien_thi = models.CharField(max_length=100 , null=False)
+    gioi_tinh = models.CharField(max_length=10, choices=[('male', 'Nam'), ('female', 'Nữ')], default='male')
     avatar_url = models.URLField(blank=True, null=True)
-    ngay_sinh = models.DateField(blank=True, null=True)
+    ngay_sinh = models.DateField(blank=True, null=False)
     quoc_gia = models.CharField(max_length=50, blank=True, null=True)
     la_premium = models.BooleanField(default=False)
     google_id = models.CharField(max_length=255, blank=True, null=True)
@@ -42,7 +50,9 @@ class NguoiDung(AbstractBaseUser, PermissionsMixin):
     REQUIRED_FIELDS = ["ten_hien_thi"]  # Các trường bắt buộc khi tạo superuser
 
     class Meta:
-        db_table = "nguoidung"  # Đổi tên bảng thành "nguoidung"
+        db_table = "nguoidung"
+        verbose_name = "Người dùng"
+        verbose_name_plural = "Người dùng"
 
     def __str__(self):
         return self.email

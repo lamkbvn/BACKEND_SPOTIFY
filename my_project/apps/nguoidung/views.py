@@ -1,6 +1,8 @@
 import time
+from datetime import datetime
 
 from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
 from rest_framework import status
 from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
@@ -48,14 +50,41 @@ from django.conf import settings
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
+@csrf_exempt
 def them_nguoi_dung(request):
+
     email = request.data.get('email', None)
     so_dien_thoai = request.data.get('so_dien_thoai', None)
     mat_khau = request.data.get('password', None)
 
-    if so_dien_thoai and NguoiDung.objects.filter(so_dien_thoai=so_dien_thoai).exists():
-        return Response({"error": "Số điện thoại đã được sử dụng!"}, status=status.HTTP_400_BAD_REQUEST)
 
+    required_fields = ['email', 'password', 'ten_hien_thi', 'gioi_tinh', 'ngay_sinh']
+    errors = {}
+
+    # Kiểm tra các trường có bị thiếu không
+    for field in required_fields:
+        if not request.data.get(field):
+            errors[field] = "Không được để trống"
+
+    # Kiểm tra định dạng ngày sinh
+    ngay_sinh = request.data.get('ngay_sinh', None)
+    if ngay_sinh:
+        try:
+            datetime.strptime(ngay_sinh, '%Y-%m-%d')  # Kiểm tra xem có đúng định dạng không
+        except ValueError:
+            errors['ngay_sinh'] = "Ngày sinh không đúng định dạng YYYY-MM-DD"
+
+    # Kiểm tra email đã tồn tại chưa
+    if NguoiDung.objects.filter(email=email).exists():
+        errors['email'] = "Email đã được sử dụng"
+
+
+    if so_dien_thoai and NguoiDung.objects.filter(so_dien_thoai=so_dien_thoai).exists():
+        errors['so_dien_thoai'] = "Số điện thoại đã được sử dụng!"
+
+    # Nếu có lỗi, trả về lỗi chi tiết
+    if errors:
+        return Response(errors, status=status.HTTP_400_BAD_REQUEST)
     # Mã hóa mật khẩu trước khi lưu
     if mat_khau:
         request.data['password'] = make_password(mat_khau)
@@ -98,6 +127,7 @@ def cap_nhat_nguoi_dung(request):
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 # API đăng nhập bằng email và mật khẩu
+# @csrf_exempt
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def login(request):
@@ -120,11 +150,11 @@ def login(request):
     # Thiết lập cookie HttpOnly cho refresh token
     response = JsonResponse(data ={
             'message' : 'Dang nhap thanh cong',
-            'refresh' : str(refresh),
+            # 'refresh' : str(refresh),
             'access': access_token,  # Access token sẽ được frontend sử dụng
-            'nguoi_dung_id': nguoidung.nguoi_dung_id,
+            # 'nguoi_dung_id': nguoidung.nguoi_dung_id,
             'ten_hien_thi': nguoidung.ten_hien_thi,
-            'email': nguoidung.email
+            # 'email': nguoidung.email,
     } , status = 201)
 
     response.set_cookie(
@@ -132,51 +162,75 @@ def login(request):
             value=str(refresh),
             httponly=True,  # Bảo mật: Không thể truy cập từ JavaScript
             secure=True,  # Bật nếu chạy trên HTTPS
-            samesite="Lax",  # Ngăn chặn CSRF , đặt thành none nếu khác domain
-            max_age=7 * 24 * 60 * 60,  # Token sống 7 ngày
+            samesite="None",  # Ngăn chặn CSRF , đặt thành none nếu khác domain
+            max_age=  int(settings.SIMPLE_JWT["ACCESS_TOKEN_LIFETIME"].total_seconds()),  # Token sống 7 ngày
     )
 
     response.set_cookie(
             key="access_token",
             value=access_token,
             httponly=True,  # Bảo mật: Không thể truy cập từ JavaScript
-            secure=True,  # Bật nếu chạy trên HTTPS
-            samesite="Lax",  # Ngăn chặn CSRF , đặt thành none nếu khác domain
-            max_age=7 * 24 * 60 * 60,  # Token sống 7 ngày
+            secure=True, # Bật nếu chạy trên HTTPS
+            samesite="None",  # Ngăn chặn CSRF , đặt thành None nếu khác domain
+            max_age= int(settings.SIMPLE_JWT["REFRESH_TOKEN_LIFETIME"].total_seconds()),  # Token sống 7 ngày
     )
 
     return response
+
+@api_view(['GET'])
+def get_access_token(request):
+    access_token = request.COOKIES.get("access_token")
+    print(request.COOKIES)
+    return Response({"access_token": access_token} , status = status.HTTP_200_OK)
+
+from django.utils.timezone import now
+from datetime import timedelta
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def logout(request):
     try:
         refresh_token = request.COOKIES.get('refresh_token')
+        access_token = request.COOKIES.get('access_token')
+
         if not refresh_token:
             return Response({'error': 'Vui lòng cung cấp refresh token'}, status=400)
 
         try:
-            # Thử đưa Refresh Token vào blacklist
+            # Thêm Refresh Token vào blacklist
             token = RefreshToken(refresh_token)
             token.blacklist()
         except Exception:
             return Response({'error': 'Refresh Token không hợp lệ hoặc đã hết hạn'}, status=400)
 
-        # Lấy access token từ header
-        auth_header = request.headers.get("Authorization")
-        if not auth_header or not auth_header.startswith("Bearer "):
+        if not access_token:
             return Response({'error': 'Không có Access Token'}, status=400)
 
-        access_token_str = auth_header.split(" ")[1]
-
         try:
-            # Thử kiểm tra Access Token
-            access_token = AccessToken(access_token_str)
-            BlacklistedAccessToken.objects.create(token_access=access_token_str)
+            # Thêm Access Token vào danh sách bị vô hiệu hóa
+            access_token_obj = AccessToken(access_token)
+            BlacklistedAccessToken.objects.create(token_access=access_token)
         except ValidationError:
             return Response({'error': 'Access Token không hợp lệ'}, status=400)
 
-        return Response({'message': 'Đăng xuất thành công'}, status=200)
+        # Xóa cả refresh token và access token khỏi cookie
+        response = Response({'message': 'Đăng xuất thành công'}, status=200)
+        expire_time = now() - timedelta(seconds=1)  # Đặt thời gian hết hạn về quá khứ
+
+        response.set_cookie(
+            key='refresh_token',
+            value='',
+            httponly=True,
+            expires=expire_time
+        )
+        response.set_cookie(
+            key='access_token',
+            value='',
+            httponly=True,
+            expires=expire_time
+        )
+
+        return response
 
     except Exception as e:
         return Response({'error': f'Lỗi hệ thống: {str(e)}'}, status=500)
@@ -264,6 +318,22 @@ def password_reset_confirm(request, uidb64, token):
             return Response({'error': 'Invalid or expired token'}, status=status.HTTP_400_BAD_REQUEST)
     except (NguoiDung.DoesNotExist, ValueError):
         return Response({'error': 'Invalid request'}, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])  # Chỉ cho phép người đã đăng nhập
+def thong_tin_nguoi_dung(request):
+    user = request.user
+
+    # if not user.is_authenticated:
+    #     return Response({"error": "Người dùng chưa đăng nhập!"}, status=status.HTTP_401_UNAUTHORIZED)
+
+    return Response({
+        "id": user.nguoi_dung_id,
+        "email": user.email,
+        "ten_hien_thi": user.ten_hien_thi,
+        "gioi_tinh": user.gioi_tinh,
+        "ngay_sinh": user.ngay_sinh,
+    } , status = status.HTTP_200_OK)
 
 @api_view(['GET'])
 @permission_classes([IsAdminUser])  # Dùng IsAdminUser thay cho AllowAny để chỉ admin mới có thể xem danh sách
