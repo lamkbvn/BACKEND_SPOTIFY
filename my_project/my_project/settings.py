@@ -35,7 +35,6 @@ ALLOWED_HOSTS = ['*']
 AUTH_USER_MODEL = "common.NguoiDung"  # Đổi "ten_app" thành tên app của bạn
 
 CORS_ALLOW_ALL_ORIGINS = True
-# Application definition
 
 
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
