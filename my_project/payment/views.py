@@ -34,7 +34,7 @@ def create_zalopay_order(request):
             "item": json.dumps([{"itemid": "knb", "itemname": "kim nguyen bao", "itemprice": amount, "itemquantity": 1}], separators=(',', ':')),
             "amount": amount,
             "description": "ZaloPay Integration Demo",
-            "bankcode": "zalopayapp"
+            "bankcode": ""
         }
 
         # Tạo chữ ký MAC
