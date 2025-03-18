@@ -12,12 +12,19 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 import urllib.parse
 from django.http import JsonResponse
+import paypalrestsdk
+from django.views.decorators.csrf import csrf_exempt
+from django.http import JsonResponse
 
 ZALOPAY_CONFIG = {
     "appid": 2554,
     "key1": "sdngKKJmqEMzvh5QQcdD2A9XBSKUNaYn",
     "key2": "trMrHtvjo6myautxDUiAcYsVtaeQ8nhf",
     "endpoint": "https://sandbox.zalopay.com.vn/v001/tpe/createorder"
+}
+PAYPAL_CONFIG = {
+"PAYPAL_CLIENT_ID": "AZ_-6YwdsonLLP-tlZe6eZPSgI_0qLxZjq4ETlICSlHX6TT5eoJOEIm1uRNKddRhER8i6ZxH8EN0-1li",
+"PAYPAL_CLIENT_SECRET": "ENj2tLvl0OBZ9abzGCkVbh2EClzfGpSvvvCd_y1fITKI-RbzVSQkEM1ZIf2FhQqDOnnV-jcIQ9x0DmMw"
 }
 
 @api_view(["POST"])
@@ -37,7 +44,7 @@ def create_zalopay_order(request):
             "item": json.dumps([{"itemid": "knb", "itemname": "kim nguyen bao", "itemprice": amount, "itemquantity": 1}], separators=(',', ':')),
             "amount": amount,
             "description": "ZaloPay Integration Demo",
-            "bankcode": "zalopayapp"
+            "bankcode": ""
         }
 
         # Tạo chữ ký MAC
@@ -172,3 +179,82 @@ def create_vnpay_payment_url(request):
     return JsonResponse({"payment_url": payment_url}, status=200)
 
 
+
+
+
+paypalrestsdk.configure({
+    "mode": "sandbox",  # Đổi thành "live" khi Go Live
+    "client_id": PAYPAL_CONFIG.get("PAYPAL_CLIENT_ID"),
+    "client_secret": PAYPAL_CONFIG.get("PAYPAL_CLIENT_SECRET")
+})
+
+
+@csrf_exempt
+def create_paypal_order(request):
+    if request.method == 'POST':
+        print("➡️ Received POST request to create PayPal order.")
+        try:
+            data = json.loads(request.body)
+            print(f"📦 Request data: {data}")
+            amount = data.get('amount')
+            print(f"💵 Payment amount: {amount} USD")
+
+            payment = paypalrestsdk.Payment({
+                "intent": "sale",
+                "payer": {"payment_method": "paypal"},
+                "redirect_urls": {
+                    "return_url": "http://localhost:3000/success",  # frontend
+                    "cancel_url": "http://localhost:3000/cancel"
+                },
+                "transactions": [{
+                    "amount": {
+                        "total": str(amount),
+                        "currency": "USD"
+                    },
+                    "description": "Payment description"
+                }]
+            })
+
+            print("📤 Sending payment creation request to PayPal...")
+            if payment.create():
+                print("✅ Payment created successfully.")
+                for link in payment.links:
+                    print(f"🔗 Found link: rel={link.rel}, href={link.href}")
+                    if link.rel == "approval_url":
+                        print(f"➡️ Returning approval URL: {link.href}")
+                        return JsonResponse({"approval_url": link.href})
+                print("⚠️ No approval_url found in payment.links.")
+                return JsonResponse({"error": "No approval URL found."}, status=400)
+            else:
+                print(f"❌ Payment creation failed: {payment.error}")
+                return JsonResponse({"error": payment.error}, status=400)
+        except Exception as e:
+            print(f"❗ Exception occurred: {str(e)}")
+            return JsonResponse({"error": str(e)}, status=500)
+
+
+@csrf_exempt
+def capture_paypal_order(request):
+    if request.method == 'POST':
+        print("➡️ Received POST request to capture PayPal payment.")
+        try:
+            data = json.loads(request.body)
+            print(f"📦 Request data: {data}")
+            payment_id = data.get('paymentId')
+            payer_id = data.get('payerId')
+            print(f"🔍 Payment ID: {payment_id}")
+            print(f"🙋‍♂️ Payer ID: {payer_id}")
+
+            print("🔄 Finding payment by ID...")
+            payment = paypalrestsdk.Payment.find(payment_id)
+
+            print("💳 Executing payment...")
+            if payment.execute({"payer_id": payer_id}):
+                print("✅ Payment executed successfully.")
+                return JsonResponse({"message": "Payment successful"})
+            else:
+                print(f"❌ Payment execution failed: {payment.error}")
+                return JsonResponse({"error": payment.error}, status=400)
+        except Exception as e:
+            print(f"❗ Exception occurred: {str(e)}")
+            return JsonResponse({"error": str(e)}, status=500)
