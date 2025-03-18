@@ -286,7 +286,7 @@ def request_password_reset(request):
         user = NguoiDung.objects.get(email=email)
         uid = urlsafe_base64_encode(force_bytes(user.pk))
         token = default_token_generator.make_token(user)
-        reset_url = request.build_absolute_uri(reverse('password-reset-confirm', kwargs={'uidb64': uid, 'token': token}))
+        reset_url = reset_url = f'http://localhost:5173/reset-password/{uid}/{token}'
 
         # Gửi email chứa link reset password
         send_mail(
