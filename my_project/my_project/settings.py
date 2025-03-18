@@ -37,7 +37,7 @@ AUTH_USER_MODEL = "common.NguoiDung"  # Đổi "ten_app" thành tên app của b
 CORS_ALLOW_CREDENTIALS = True  # Cho phép gửi cookie
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",  # Địa chỉ frontend
-
+    "https://sandbox.vnpayment.vn",
 ]
 CORS_ALLOW_HEADERS = [
     "authorization",
@@ -224,3 +224,10 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+VNPAY_CONFIG = {
+    "VNPAY_URL": "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html",  # URL VNPay
+    "VNPAY_TMNCODE": "1AWYLE8L",  # Thay bằng TMN Code của bạn
+    "VNPAY_HASH_SECRET": "YWR73YZ0QF1JVDMQHTQ3T4LFY0OZEBHQ",  # Thay bằng Secret Key của bạn
+    "VNPAY_RETURN_URL": "http://127.0.0.1:8000/api/vnpay/return/",
+}
