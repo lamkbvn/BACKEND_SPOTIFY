@@ -139,10 +139,10 @@ def login(request):
     try:
         nguoidung = NguoiDung.objects.get(email=email)
     except NguoiDung.DoesNotExist:
-        return Response({'error': 'Không tìm thấy tài khoản với email này'}, status=404)
+        return Response({'email': 'Không tìm thấy tài khoản với email này'}, status=404)
 
     if not check_password(password, nguoidung.password):  # Đảm bảo bạn lưu mật khẩu đã mã hóa trong DB
-        return Response({'error': 'Sai mật khẩu'}, status=400)
+        return Response({'password': 'Sai mật khẩu'}, status=400)
     # Tạo JWT token
     refresh = RefreshToken.for_user(nguoidung)
     access_token = str(refresh.access_token)
@@ -299,7 +299,7 @@ def request_password_reset(request):
 
         return Response({'message': 'Password reset link sent'}, status=status.HTTP_200_OK)
     except NguoiDung.DoesNotExist:
-        return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+        return Response({'message': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
 
 
 @api_view(['POST'])
