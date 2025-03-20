@@ -88,16 +88,26 @@ class Album(models.Model):
         return f"{self.ten_album} - {self.nghe_si.ten_nghe_si}"
 
 
+from django.db import models
+from storages.backends.s3boto3 import S3Boto3Storage
+
 class BaiHat(models.Model):
     bai_hat_id = models.BigAutoField(primary_key=True)  # Khóa chính, tự động tăng
     ten_bai_hat = models.CharField(max_length=255)
     nghe_si = models.ForeignKey(NgheSi, on_delete=models.CASCADE, related_name="bai_hat")  # Nghệ sĩ
     album = models.ForeignKey(Album, on_delete=models.SET_NULL, null=True, blank=True, related_name="bai_hat")  # Album chứa bài hát
     the_loai = models.CharField(max_length=100)
-    duong_dan = models.URLField()
+    file_bai_hat = models.FileField(upload_to='songs/', storage=S3Boto3Storage(), null=True, blank=True)  # File âm thanh
+    duong_dan = models.URLField(blank=True, null=True)  # URL của file trên S3
     loi_bai_hat = models.TextField(blank=True, null=True)
     thoi_luong = models.IntegerField()  # Tính bằng giây
     ngay_phat_hanh = models.DateField()
+
+    def save(self, *args, **kwargs):
+        # Khi lưu, nếu có file được upload, lấy URL từ S3 và lưu vào duong_dan
+        if self.file_bai_hat and not self.duong_dan:
+            self.duong_dan = self.file_bai_hat.url
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.ten_bai_hat} - {self.nghe_si.ten_nghe_si}"
