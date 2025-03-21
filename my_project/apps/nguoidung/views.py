@@ -3,49 +3,18 @@ from datetime import datetime
 
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
-from rest_framework import status
 from rest_framework.exceptions import ValidationError
-from rest_framework.response import Response
-from rest_framework.decorators import api_view
 from django.contrib.auth.hashers import check_password, make_password
-from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
 from rest_framework_simplejwt.tokens import RefreshToken, AccessToken
 from rest_framework.permissions import IsAuthenticated, IsAdminUser
-from rest_framework.decorators import permission_classes
-from rest_framework_simplejwt.authentication import JWTAuthentication
-from rest_framework.decorators import authentication_classes
-
 from .models import BlacklistedAccessToken
 from ..common.models import NguoiDung  # Import từ common
 from ..common.serializers import NguoiDungSerializer  # Import từ common
-
-from rest_framework.response import Response
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import AllowAny
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth.hashers import check_password
 from django.shortcuts import get_object_or_404
-from rest_framework_simplejwt.token_blacklist.models import BlacklistedToken
-
-from django.contrib.auth.models import User
-from django.core.mail import send_mail
-from django.utils.http import urlsafe_base64_encode
-from django.utils.encoding import force_bytes
-from django.template.loader import render_to_string
-from django.contrib.auth.tokens import default_token_generator
-from rest_framework.decorators import api_view
-from rest_framework.response import Response
-from rest_framework import status
-
-from django.contrib.auth import get_user_model
-from django.utils.http import urlsafe_base64_encode
-from django.utils.encoding import force_bytes
-from django.contrib.auth.tokens import default_token_generator
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
-from rest_framework.response import Response
-from rest_framework import status
-from twilio.rest import Client
 from django.conf import settings
 
 @api_view(['POST'])
