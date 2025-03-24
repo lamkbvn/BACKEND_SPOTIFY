@@ -55,12 +55,13 @@ def them_bai_hat_vao_danhsach(request):
         bai_hat_id=bai_hat_id,
         danh_sach_phat_id=danh_sach_phat_id
     )
+    
 
     return Response(
         {
             "message": "Bài hát đã được thêm vào danh sách phát!",
             "data": {
-                "bai_hat_trong_danh_sach_id": bai_hat_trong_ds.id,
+                "bai_hat_trong_danh_sach_id": bai_hat_trong_ds.bai_hat_trong_danh_sach_id,
                 "bai_hat_id": bai_hat_trong_ds.bai_hat_id,
                 "danh_sach_phat_id": bai_hat_trong_ds.danh_sach_phat_id,
                 "ngay_them": bai_hat_trong_ds.ngay_them

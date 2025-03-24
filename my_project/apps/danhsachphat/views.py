@@ -15,6 +15,17 @@ def them_danhsachphat(request):
         return Response({"message": "Danh sách phạt đã được thêm thành công!", "data": serializer.data}, status=status.HTTP_201_CREATED)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+# Lấy danh sách phạt theo nguoi_dung_id_id
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def get_danhsachphat_by_user(request, nguoi_dung_id):
+    danh_sach = DanhSachPhat.objects.filter(nguoi_dung_id_id=nguoi_dung_id)
+    if danh_sach.exists():
+        serializer = DanhSachPhatSerializer(danh_sach, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    return Response({"error": "Không tìm thấy danh sách phạt cho người dùng này!"}, status=status.HTTP_404_NOT_FOUND)
+
+
 # Lấy danh sách phạt (GET all)
 @api_view(['GET'])
 @permission_classes([AllowAny])
