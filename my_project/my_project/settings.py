@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 """
 
 from pathlib import Path
+from decouple import config
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 import sys
@@ -30,11 +31,31 @@ SECRET_KEY = 'django-insecure-^5ykhf20%@!1rrc_j!p8(0!#5i2fv9f1rswm^8mjo+#qqq@t__
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['*']
+# ALLOWED_HOSTS = ['*']
 
 AUTH_USER_MODEL = "common.NguoiDung"  # Đổi "ten_app" thành tên app của bạn
 
-CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOW_CREDENTIALS = True  # Cho phép gửi cookie
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:5173",  # Địa chỉ frontend
+    "https://sandbox.vnpayment.vn",
+]
+CORS_ALLOW_HEADERS = [
+    "authorization",
+    "content-type",
+    "x-csrftoken",
+]
+
+CSRF_TRUSTED_ORIGINS = [
+     "http://localhost:5173",   # ✅ Cho phép domain frontend tránh lỗi CSRF
+]
+
+CORS_EXPOSE_HEADERS = ["Set-Cookie"]
+CSRF_COOKIE_SAMESITE = "None"
+CSRF_COOKIE_SECURE = True   # ⚠️ Phải là True nếu dùng SameSite=None
+SESSION_COOKIE_SAMESITE = "None"
+SESSION_COOKIE_SECURE = True
+
 # Application definition
 
 
@@ -46,14 +67,6 @@ EMAIL_USE_SSL = True
 EMAIL_HOST_USER = 'lamkbvn@gmail.com'  # Email của bạn
 EMAIL_HOST_PASSWORD = 'wxuudzlonenlxuun'  # Mật khẩu ứng dụng (App Password)
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
-
-
-# Cho phép đọc cookie từ frontend
-CSRF_TRUSTED_ORIGINS = ["http://localhost:8000", "http://127.0.0.1:8000"]  # Thay bằng domain frontend của bạn
-SESSION_COOKIE_HTTPONLY = True
-SESSION_COOKIE_SECURE = False  # Nếu đang dùng HTTPS thì đặt True
-CSRF_COOKIE_HTTPONLY = True
-CSRF_COOKIE_SECURE = False  # Nếu đang dùng HTTPS thì đặt True
 
 
 INSTALLED_APPS = [
@@ -78,8 +91,8 @@ INSTALLED_APPS = [
 
 
 # Cấu hình AWS S3
-AWS_ACCESS_KEY_ID = 'admin'
-AWS_SECRET_ACCESS_KEY = 'w$;8H?JFfwkAg8+'
+AWS_ACCESS_KEY_ID = config('AWS_ACCESS_KEY_ID')
+AWS_SECRET_ACCESS_KEY = config('AWS_SECRET_ACCESS_KEY')
 AWS_STORAGE_BUCKET_NAME = 'spotifycloud'
 AWS_S3_REGION_NAME = 'ap-southeast-2'
 DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
@@ -92,18 +105,21 @@ REST_FRAMEWORK = {
         'rest_framework.authentication.TokenAuthentication',
     ),
     'DEFAULT_PERMISSION_CLASSES': (
-        'rest_framework.permissions.IsAuthenticated',
+        # 'rest_framework.permissions.IsAuthenticated',
+        'rest_framework.permissions.AllowAny',
     ),
+
 }
 
 
 from datetime import timedelta
 
 SIMPLE_JWT = {
-    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=2),
-    "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=10),
+    "REFRESH_TOKEN_LIFETIME": timedelta(minutes=10),
     "ROTATE_REFRESH_TOKENS": True,  # Tạo refresh token mới khi dùng refresh
     "BLACKLIST_AFTER_ROTATION": True,  # Đưa refresh token cũ vào blacklist sau khi refresh
+    "UPDATE_LAST_LOGIN": True,
     "TOKEN_BLACKLIST" : True ,
     "ALGORITHM": "HS256",
     "SIGNING_KEY": SECRET_KEY,
@@ -114,6 +130,7 @@ SIMPLE_JWT = {
     "TOKEN_TYPE_CLAIM": "token_type",
     "AUTH_TOKEN_CLASSES": ("rest_framework_simplejwt.tokens.AccessToken",),
     "TOKEN_BLACKLIST_CHECKS": True,  # Kiểm tra danh sách blacklist
+    "AUTH_COOKIE_SAMESITE": "None",
 }
 
 MIDDLEWARE = [
@@ -125,6 +142,10 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'apps.nguoidung.middleware.JWTBlacklistMiddleware',
+    'apps.nguoidung.middleware.TokenRefreshMiddleware',
+    'apps.nguoidung.middleware.AttachTokenMiddleware',
+
 ]
 
 ROOT_URLCONF = 'my_project.urls'
@@ -206,3 +227,10 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+VNPAY_CONFIG = {
+    "VNPAY_URL": "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html",  # URL VNPay
+    "VNPAY_TMNCODE": "1AWYLE8L",  # Thay bằng TMN Code của bạn
+    "VNPAY_HASH_SECRET": "YWR73YZ0QF1JVDMQHTQ3T4LFY0OZEBHQ",  # Thay bằng Secret Key của bạn
+    "VNPAY_RETURN_URL": "http://127.0.0.1:8000/api/vnpay/return/",
+}

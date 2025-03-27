@@ -15,16 +15,24 @@ class NguoiDungManager(BaseUserManager):
     def create_superuser(self, email, mat_khau=None, **extra_fields):
         extra_fields.setdefault("is_staff", True)
         extra_fields.setdefault("is_superuser", True)
+
+        if not extra_fields.get("is_staff"):
+            raise ValueError("Superuser phải có is_staff=True.")
+        if not extra_fields.get("is_superuser"):
+            raise ValueError("Superuser phải có is_superuser=True.")
+
         return self.create_user(email, mat_khau, **extra_fields)
+
 
 class NguoiDung(AbstractBaseUser, PermissionsMixin):
     """Mô hình người dùng tùy chỉnh"""
     nguoi_dung_id = models.BigAutoField(primary_key=True)  # Khóa chính
     email = models.EmailField(unique=True)
-    so_dien_thoai = models.CharField(max_length=15, blank=True, null=True)
-    ten_hien_thi = models.CharField(max_length=100)
+    so_dien_thoai = models.CharField(max_length=15, blank=True, null=False)
+    ten_hien_thi = models.CharField(max_length=100 , null=False)
+    gioi_tinh = models.CharField(max_length=10, choices=[('male', 'Nam'), ('female', 'Nữ')], default='male')
     avatar_url = models.URLField(blank=True, null=True)
-    ngay_sinh = models.DateField(blank=True, null=True)
+    ngay_sinh = models.DateField(blank=True, null=False)
     quoc_gia = models.CharField(max_length=50, blank=True, null=True)
     la_premium = models.BooleanField(default=False)
     google_id = models.CharField(max_length=255, blank=True, null=True)
@@ -42,7 +50,9 @@ class NguoiDung(AbstractBaseUser, PermissionsMixin):
     REQUIRED_FIELDS = ["ten_hien_thi"]  # Các trường bắt buộc khi tạo superuser
 
     class Meta:
-        db_table = "nguoidung"  # Đổi tên bảng thành "nguoidung"
+        db_table = "nguoidung"
+        verbose_name = "Người dùng"
+        verbose_name_plural = "Người dùng"
 
     def __str__(self):
         return self.email
@@ -78,16 +88,26 @@ class Album(models.Model):
         return f"{self.ten_album} - {self.nghe_si.ten_nghe_si}"
 
 
+from django.db import models
+from storages.backends.s3boto3 import S3Boto3Storage
+
 class BaiHat(models.Model):
     bai_hat_id = models.BigAutoField(primary_key=True)  # Khóa chính, tự động tăng
     ten_bai_hat = models.CharField(max_length=255)
     nghe_si = models.ForeignKey(NgheSi, on_delete=models.CASCADE, related_name="bai_hat")  # Nghệ sĩ
     album = models.ForeignKey(Album, on_delete=models.SET_NULL, null=True, blank=True, related_name="bai_hat")  # Album chứa bài hát
     the_loai = models.CharField(max_length=100)
-    duong_dan = models.URLField()
+    file_bai_hat = models.FileField(upload_to='songs/', storage=S3Boto3Storage(), null=True, blank=True)  # File âm thanh
+    duong_dan = models.URLField(blank=True, null=True)  # URL của file trên S3
     loi_bai_hat = models.TextField(blank=True, null=True)
     thoi_luong = models.IntegerField()  # Tính bằng giây
     ngay_phat_hanh = models.DateField()
+
+    def save(self, *args, **kwargs):
+        # Khi lưu, nếu có file được upload, lấy URL từ S3 và lưu vào duong_dan
+        if self.file_bai_hat and not self.duong_dan:
+            self.duong_dan = self.file_bai_hat.url
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.ten_bai_hat} - {self.nghe_si.ten_nghe_si}"
