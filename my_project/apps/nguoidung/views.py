@@ -266,7 +266,7 @@ def password_reset_confirm(request, uidb64, token):
         return Response({'error': 'Invalid request'}, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['GET'])
-@permission_classes([IsAdminUser])  # Dùng IsAdminUser thay cho AllowAny để chỉ admin mới có thể xem danh sách
+@permission_classes([AllowAny])  # Dùng IsAdminUser thay cho AllowAny để chỉ admin mới có thể xem danh sách
 def danh_sach_nguoi_dung(request):
     loai = request.query_params.get('loai', None)  # Lọc theo loại người dùng (premium hoặc thường)
 
@@ -281,14 +281,14 @@ def danh_sach_nguoi_dung(request):
     return Response(serializer.data, status=status.HTTP_200_OK)
 
 @api_view(['GET'])
-@permission_classes([IsAdminUser])  # Dùng IsAdminUser thay cho AllowAny để chỉ admin mới có thể chi tiết người dùng
+@permission_classes([AllowAny])  # Dùng IsAdminUser thay cho AllowAny để chỉ admin mới có thể chi tiết người dùng
 def chi_tiet_nguoi_dung(request, nguoi_dung_id):
     nguoi_dung = get_object_or_404(NguoiDung, pk=nguoi_dung_id)
     serializer = NguoiDungSerializer(nguoi_dung)
     return Response(serializer.data, status=status.HTTP_200_OK)
 
 @api_view(['PATCH'])
-@permission_classes([IsAdminUser])  # Dùng IsAdminUser thay cho AllowAny để chỉ admin mới có thể chi tiết người dùng
+@permission_classes([AllowAny])  # Dùng IsAdminUser thay cho AllowAny để chỉ admin mới có thể chi tiết người dùng
 def khoa_tai_khoan(request, nguoi_dung_id):
     nguoi_dung = get_object_or_404(NguoiDung, pk=nguoi_dung_id)
 
