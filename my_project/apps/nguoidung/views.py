@@ -213,6 +213,23 @@ def refresh_token(request):
     except Exception as e:
         return Response({"error": "Refresh token không hợp lệ hoặc đã hết hạn"}, status=400)
 
+def get_access_token(request):
+    """
+    Nhận refresh token từ cookie hoặc request body,
+    kiểm tra tính hợp lệ và trả về access token mới.
+    """
+    refreshtoken = request.COOKIES.get('refresh_token') or request.data.get('refresh')
+
+    if not refreshtoken:
+        return Response({"error": "Vui lòng cung cấp refresh token"}, status=400)
+
+    try:
+        # Kiểm tra token hợp lệ và tạo access token mới
+        refresh = RefreshToken(refreshtoken)
+        access_token = str(refresh.access_token)
+        return Response({"access_token": access_token}, status=200)
+    except (TokenError, InvalidToken):
+        return Response({"error": "Refresh token không hợp lệ hoặc đã hết hạn"}, status=400)
 
 from django.contrib.auth.models import User
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
