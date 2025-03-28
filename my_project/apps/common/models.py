@@ -65,6 +65,7 @@ class NgheSi(models.Model):
     anh_dai_dien = models.URLField(blank=True, null=True)  # Ảnh đại diện nghệ sĩ
     ngay_sinh = models.DateField(blank=True, null=True)
     quoc_gia = models.CharField(max_length=100, blank=True, null=True)
+    is_active = models.BooleanField(default=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -80,6 +81,9 @@ class Album(models.Model):
     anh_bia = models.URLField(blank=True, null=True)  # Ảnh bìa album
     ngay_phat_hanh = models.DateField()  # Ngày phát hành album
     the_loai = models.CharField(max_length=100)  # Thể loại album
+    
+    # Trường cần thiết để thay thế User mặc định
+    is_active = models.BooleanField(default=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

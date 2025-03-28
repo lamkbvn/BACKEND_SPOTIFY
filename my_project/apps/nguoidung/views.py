@@ -1,59 +1,61 @@
 import time
-from datetime import datetime
 
 from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
+from rest_framework import status
 from rest_framework.exceptions import ValidationError
+from rest_framework.response import Response
+from rest_framework.decorators import api_view
 from django.contrib.auth.hashers import check_password, make_password
+from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
 from rest_framework_simplejwt.tokens import RefreshToken, AccessToken
 from rest_framework.permissions import IsAuthenticated, IsAdminUser
+from rest_framework.decorators import permission_classes
+from rest_framework_simplejwt.authentication import JWTAuthentication
+from rest_framework.decorators import authentication_classes
+
 from .models import BlacklistedAccessToken
 from ..common.models import NguoiDung  # Import từ common
 from ..common.serializers import NguoiDungSerializer  # Import từ common
+
+from rest_framework.response import Response
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import AllowAny
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth.hashers import check_password
 from django.shortcuts import get_object_or_404
+from rest_framework_simplejwt.token_blacklist.models import BlacklistedToken
+
+from django.contrib.auth.models import User
+from django.core.mail import send_mail
+from django.utils.http import urlsafe_base64_encode
+from django.utils.encoding import force_bytes
+from django.template.loader import render_to_string
+from django.contrib.auth.tokens import default_token_generator
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
+from rest_framework import status
+
+from django.contrib.auth import get_user_model
+from django.utils.http import urlsafe_base64_encode
+from django.utils.encoding import force_bytes
+from django.contrib.auth.tokens import default_token_generator
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
+from rest_framework.response import Response
+from rest_framework import status
+from twilio.rest import Client
 from django.conf import settings
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
-@csrf_exempt
 def them_nguoi_dung(request):
-
     email = request.data.get('email', None)
     so_dien_thoai = request.data.get('so_dien_thoai', None)
     mat_khau = request.data.get('password', None)
 
-
-    required_fields = ['email', 'password', 'ten_hien_thi', 'gioi_tinh', 'ngay_sinh']
-    errors = {}
-
-    # Kiểm tra các trường có bị thiếu không
-    for field in required_fields:
-        if not request.data.get(field):
-            errors[field] = "Không được để trống"
-
-    # Kiểm tra định dạng ngày sinh
-    ngay_sinh = request.data.get('ngay_sinh', None)
-    if ngay_sinh:
-        try:
-            datetime.strptime(ngay_sinh, '%Y-%m-%d')  # Kiểm tra xem có đúng định dạng không
-        except ValueError:
-            errors['ngay_sinh'] = "Ngày sinh không đúng định dạng YYYY-MM-DD"
-
-    # Kiểm tra email đã tồn tại chưa
-    if NguoiDung.objects.filter(email=email).exists():
-        errors['email'] = "Email đã được sử dụng"
-
-
     if so_dien_thoai and NguoiDung.objects.filter(so_dien_thoai=so_dien_thoai).exists():
-        errors['so_dien_thoai'] = "Số điện thoại đã được sử dụng!"
+        return Response({"error": "Số điện thoại đã được sử dụng!"}, status=status.HTTP_400_BAD_REQUEST)
 
-    # Nếu có lỗi, trả về lỗi chi tiết
-    if errors:
-        return Response(errors, status=status.HTTP_400_BAD_REQUEST)
     # Mã hóa mật khẩu trước khi lưu
     if mat_khau:
         request.data['password'] = make_password(mat_khau)
@@ -96,7 +98,6 @@ def cap_nhat_nguoi_dung(request):
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 # API đăng nhập bằng email và mật khẩu
-# @csrf_exempt
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def login(request):
@@ -108,10 +109,10 @@ def login(request):
     try:
         nguoidung = NguoiDung.objects.get(email=email)
     except NguoiDung.DoesNotExist:
-        return Response({'email': 'Không tìm thấy tài khoản với email này'}, status=404)
+        return Response({'error': 'Không tìm thấy tài khoản với email này'}, status=404)
 
     if not check_password(password, nguoidung.password):  # Đảm bảo bạn lưu mật khẩu đã mã hóa trong DB
-        return Response({'password': 'Sai mật khẩu'}, status=400)
+        return Response({'error': 'Sai mật khẩu'}, status=400)
     # Tạo JWT token
     refresh = RefreshToken.for_user(nguoidung)
     access_token = str(refresh.access_token)
@@ -119,11 +120,11 @@ def login(request):
     # Thiết lập cookie HttpOnly cho refresh token
     response = JsonResponse(data ={
             'message' : 'Dang nhap thanh cong',
-            # 'refresh' : str(refresh),
+            'refresh' : str(refresh),
             'access': access_token,  # Access token sẽ được frontend sử dụng
-            # 'nguoi_dung_id': nguoidung.nguoi_dung_id,
+            'nguoi_dung_id': nguoidung.nguoi_dung_id,
             'ten_hien_thi': nguoidung.ten_hien_thi,
-            # 'email': nguoidung.email,
+            'email': nguoidung.email
     } , status = 201)
 
     response.set_cookie(
@@ -131,75 +132,51 @@ def login(request):
             value=str(refresh),
             httponly=True,  # Bảo mật: Không thể truy cập từ JavaScript
             secure=True,  # Bật nếu chạy trên HTTPS
-            samesite="None",  # Ngăn chặn CSRF , đặt thành none nếu khác domain
-            max_age=  int(settings.SIMPLE_JWT["ACCESS_TOKEN_LIFETIME"].total_seconds()),  # Token sống 7 ngày
+            samesite="Lax",  # Ngăn chặn CSRF , đặt thành none nếu khác domain
+            max_age=7 * 24 * 60 * 60,  # Token sống 7 ngày
     )
 
     response.set_cookie(
             key="access_token",
             value=access_token,
             httponly=True,  # Bảo mật: Không thể truy cập từ JavaScript
-            secure=True, # Bật nếu chạy trên HTTPS
-            samesite="None",  # Ngăn chặn CSRF , đặt thành None nếu khác domain
-            max_age= int(settings.SIMPLE_JWT["REFRESH_TOKEN_LIFETIME"].total_seconds()),  # Token sống 7 ngày
+            secure=True,  # Bật nếu chạy trên HTTPS
+            samesite="Lax",  # Ngăn chặn CSRF , đặt thành none nếu khác domain
+            max_age=7 * 24 * 60 * 60,  # Token sống 7 ngày
     )
 
     return response
-
-@api_view(['GET'])
-def get_access_token(request):
-    access_token = request.COOKIES.get("access_token")
-    print(request.COOKIES)
-    return Response({"access_token": access_token} , status = status.HTTP_200_OK)
-
-from django.utils.timezone import now
-from datetime import timedelta
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def logout(request):
     try:
         refresh_token = request.COOKIES.get('refresh_token')
-        access_token = request.COOKIES.get('access_token')
-
         if not refresh_token:
             return Response({'error': 'Vui lòng cung cấp refresh token'}, status=400)
 
         try:
-            # Thêm Refresh Token vào blacklist
+            # Thử đưa Refresh Token vào blacklist
             token = RefreshToken(refresh_token)
             token.blacklist()
         except Exception:
             return Response({'error': 'Refresh Token không hợp lệ hoặc đã hết hạn'}, status=400)
 
-        if not access_token:
+        # Lấy access token từ header
+        auth_header = request.headers.get("Authorization")
+        if not auth_header or not auth_header.startswith("Bearer "):
             return Response({'error': 'Không có Access Token'}, status=400)
 
+        access_token_str = auth_header.split(" ")[1]
+
         try:
-            # Thêm Access Token vào danh sách bị vô hiệu hóa
-            access_token_obj = AccessToken(access_token)
-            BlacklistedAccessToken.objects.create(token_access=access_token)
+            # Thử kiểm tra Access Token
+            access_token = AccessToken(access_token_str)
+            BlacklistedAccessToken.objects.create(token_access=access_token_str)
         except ValidationError:
             return Response({'error': 'Access Token không hợp lệ'}, status=400)
 
-        # Xóa cả refresh token và access token khỏi cookie
-        response = Response({'message': 'Đăng xuất thành công'}, status=200)
-        expire_time = now() - timedelta(seconds=1)  # Đặt thời gian hết hạn về quá khứ
-
-        response.set_cookie(
-            key='refresh_token',
-            value='',
-            httponly=True,
-            expires=expire_time
-        )
-        response.set_cookie(
-            key='access_token',
-            value='',
-            httponly=True,
-            expires=expire_time
-        )
-
-        return response
+        return Response({'message': 'Đăng xuất thành công'}, status=200)
 
     except Exception as e:
         return Response({'error': f'Lỗi hệ thống: {str(e)}'}, status=500)
@@ -236,6 +213,23 @@ def refresh_token(request):
     except Exception as e:
         return Response({"error": "Refresh token không hợp lệ hoặc đã hết hạn"}, status=400)
 
+def get_access_token(request):
+    """
+    Nhận refresh token từ cookie hoặc request body,
+    kiểm tra tính hợp lệ và trả về access token mới.
+    """
+    refreshtoken = request.COOKIES.get('refresh_token') or request.data.get('refresh')
+
+    if not refreshtoken:
+        return Response({"error": "Vui lòng cung cấp refresh token"}, status=400)
+
+    try:
+        # Kiểm tra token hợp lệ và tạo access token mới
+        refresh = RefreshToken(refreshtoken)
+        access_token = str(refresh.access_token)
+        return Response({"access_token": access_token}, status=200)
+    except (TokenError, InvalidToken):
+        return Response({"error": "Refresh token không hợp lệ hoặc đã hết hạn"}, status=400)
 
 from django.contrib.auth.models import User
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
@@ -255,7 +249,7 @@ def request_password_reset(request):
         user = NguoiDung.objects.get(email=email)
         uid = urlsafe_base64_encode(force_bytes(user.pk))
         token = default_token_generator.make_token(user)
-        reset_url = reset_url = f'http://localhost:5173/reset-password/{uid}/{token}'
+        reset_url = request.build_absolute_uri(reverse('password-reset-confirm', kwargs={'uidb64': uid, 'token': token}))
 
         # Gửi email chứa link reset password
         send_mail(
@@ -268,7 +262,7 @@ def request_password_reset(request):
 
         return Response({'message': 'Password reset link sent'}, status=status.HTTP_200_OK)
     except NguoiDung.DoesNotExist:
-        return Response({'message': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+        return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
 
 
 @api_view(['POST'])
@@ -289,23 +283,7 @@ def password_reset_confirm(request, uidb64, token):
         return Response({'error': 'Invalid request'}, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])  # Chỉ cho phép người đã đăng nhập
-def thong_tin_nguoi_dung(request):
-    user = request.user
-
-    # if not user.is_authenticated:
-    #     return Response({"error": "Người dùng chưa đăng nhập!"}, status=status.HTTP_401_UNAUTHORIZED)
-
-    return Response({
-        "id": user.nguoi_dung_id,
-        "email": user.email,
-        "ten_hien_thi": user.ten_hien_thi,
-        "gioi_tinh": user.gioi_tinh,
-        "ngay_sinh": user.ngay_sinh,
-    } , status = status.HTTP_200_OK)
-
-@api_view(['GET'])
-@permission_classes([IsAdminUser])  # Dùng IsAdminUser thay cho AllowAny để chỉ admin mới có thể xem danh sách
+@permission_classes([AllowAny])  # Dùng IsAdminUser thay cho AllowAny để chỉ admin mới có thể xem danh sách
 def danh_sach_nguoi_dung(request):
     loai = request.query_params.get('loai', None)  # Lọc theo loại người dùng (premium hoặc thường)
 
@@ -320,14 +298,14 @@ def danh_sach_nguoi_dung(request):
     return Response(serializer.data, status=status.HTTP_200_OK)
 
 @api_view(['GET'])
-@permission_classes([IsAdminUser])  # Dùng IsAdminUser thay cho AllowAny để chỉ admin mới có thể chi tiết người dùng
+@permission_classes([AllowAny])  # Dùng IsAdminUser thay cho AllowAny để chỉ admin mới có thể chi tiết người dùng
 def chi_tiet_nguoi_dung(request, nguoi_dung_id):
     nguoi_dung = get_object_or_404(NguoiDung, pk=nguoi_dung_id)
     serializer = NguoiDungSerializer(nguoi_dung)
     return Response(serializer.data, status=status.HTTP_200_OK)
 
 @api_view(['PATCH'])
-@permission_classes([IsAdminUser])  # Dùng IsAdminUser thay cho AllowAny để chỉ admin mới có thể chi tiết người dùng
+@permission_classes([AllowAny])  # Dùng IsAdminUser thay cho AllowAny để chỉ admin mới có thể chi tiết người dùng
 def khoa_tai_khoan(request, nguoi_dung_id):
     nguoi_dung = get_object_or_404(NguoiDung, pk=nguoi_dung_id)
 

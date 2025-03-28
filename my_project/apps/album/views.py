@@ -5,6 +5,7 @@ from rest_framework.response import Response
 from rest_framework.decorators import api_view, permission_classes
 from ..common.models import Album, NgheSi
 from ..common.serializers import AlbumSerializer
+from django.core.paginator import Paginator
 
 # Create your views here.
 @api_view(['POST'])
@@ -22,6 +23,41 @@ def get_albums(request):
     albums = Album.objects.all()
     serializer = AlbumSerializer(albums, many=True)
     return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def get_album_phan_trang(request):
+    # Lấy tham số từ request
+    page = int(request.GET.get('page', 0))
+    size = int(request.GET.get('size', 10))
+    search_query = request.GET.get('search', '').strip()  # Lấy từ khóa tìm kiếm
+
+    # Lọc danh sách nghệ sĩ nếu có từ khóa tìm kiếm
+    if search_query:
+        album_list = Album.objects.filter(ten_album__icontains=search_query)
+    else:
+        album_list = Album.objects.all()
+
+    # Áp dụng phân trang
+    paginator = Paginator(album_list, size)
+    total_pages = paginator.num_pages
+
+    try:
+        album_page = paginator.page(page + 1)  # Django page index bắt đầu từ 1
+    except:
+        return Response({"message": "Page out of range"}, status=status.HTTP_404_NOT_FOUND)
+
+    serializer = AlbumSerializer(album_page, many=True)
+
+    return Response({
+        "page": page,
+        "size": size,
+        "total_pages": total_pages,
+        "total_items": paginator.count,
+        "data": serializer.data
+    }, status=status.HTTP_200_OK)
+
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
