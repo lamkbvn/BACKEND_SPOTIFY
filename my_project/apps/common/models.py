@@ -1,5 +1,6 @@
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 from django.db import models
+from storages.backends.s3boto3 import S3Boto3Storage
 
 class NguoiDungManager(BaseUserManager):
     """Quản lý người dùng tùy chỉnh"""
@@ -92,25 +93,25 @@ class Album(models.Model):
         return f"{self.ten_album} - {self.nghe_si.ten_nghe_si}"
 
 
-from django.db import models
-from storages.backends.s3boto3 import S3Boto3Storage
-
 class BaiHat(models.Model):
-    bai_hat_id = models.BigAutoField(primary_key=True)  # Khóa chính, tự động tăng
+    bai_hat_id = models.BigAutoField(primary_key=True)
     ten_bai_hat = models.CharField(max_length=255)
-    nghe_si = models.ForeignKey(NgheSi, on_delete=models.CASCADE, related_name="bai_hat")  # Nghệ sĩ
-    album = models.ForeignKey(Album, on_delete=models.SET_NULL, null=True, blank=True, related_name="bai_hat")  # Album chứa bài hát
+    nghe_si = models.ForeignKey("NgheSi", on_delete=models.CASCADE, related_name="bai_hat")
+    album = models.ForeignKey("Album", on_delete=models.SET_NULL, null=True, blank=True, related_name="bai_hat")
     the_loai = models.CharField(max_length=100)
-    file_bai_hat = models.FileField(upload_to='songs/', storage=S3Boto3Storage(), null=True, blank=True)  # File âm thanh
-    duong_dan = models.URLField(blank=True, null=True)  # URL của file trên S3
+    file_bai_hat = models.FileField(upload_to='songs/', storage=S3Boto3Storage(), null=True, blank=True)
+    duong_dan = models.URLField(blank=True, null=True)  # URL cố định không hết hạn
     loi_bai_hat = models.TextField(blank=True, null=True)
-    thoi_luong = models.IntegerField()  # Tính bằng giây
+    thoi_luong = models.IntegerField()
     ngay_phat_hanh = models.DateField()
 
     def save(self, *args, **kwargs):
-        # Khi lưu, nếu có file được upload, lấy URL từ S3 và lưu vào duong_dan
-        if self.file_bai_hat and not self.duong_dan:
-            self.duong_dan = self.file_bai_hat.url
+        if self.file_bai_hat:
+            filename = self.file_bai_hat.name
+            # Nếu tên file không bắt đầu với "songs/", thêm vào
+            if not filename.startswith("songs/"):
+                filename = f"songs/{filename}"
+            self.duong_dan = f"https://spotifycloud.s3.amazonaws.com/{filename}"
         super().save(*args, **kwargs)
 
     def __str__(self):
