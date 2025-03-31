@@ -104,6 +104,7 @@ class BaiHat(models.Model):
     loi_bai_hat = models.TextField(blank=True, null=True)
     thoi_luong = models.IntegerField()
     ngay_phat_hanh = models.DateField()
+    is_premium = models.IntegerField()
 
     def save(self, *args, **kwargs):
         if self.file_bai_hat:
