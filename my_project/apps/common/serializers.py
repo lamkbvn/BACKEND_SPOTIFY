@@ -3,7 +3,7 @@ from .models import NguoiDung, Album
 from .models import DanhSachPhat
 from .models import LoiBaiHatDongBo
 from .models import LoaiBaiHat
-from .models import NgheSi
+from .models import NgheSi, ThanhToan
 from .models import BangXepHangBaiHat
 from ..common.models import BaiHat, BaiHatTrongDanhSach
 
@@ -55,3 +55,7 @@ class AlbumSerializer(serializers.ModelSerializer):
     class Meta:
         model = Album
         fields = '__all__'
+class ThanhToanSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ThanhToan
+        fields = '__all__'  # Lấy tất cả các trường của model

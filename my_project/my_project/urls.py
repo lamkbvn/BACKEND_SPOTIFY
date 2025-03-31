@@ -30,4 +30,5 @@ urlpatterns = [
     path('album/', include('apps.album.urls')),
     path('api/', include('payment.urls')),
     path('common/' , include('apps.common.urls')),
+    path('api/' , include('apps.thanhtoan.urls')),
 ]

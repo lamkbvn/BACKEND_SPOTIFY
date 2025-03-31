@@ -313,3 +313,18 @@ def khoa_tai_khoan(request, nguoi_dung_id):
     nguoi_dung.save()
 
     return Response({"message": f"Tài khoản {nguoi_dung.email} đã bị khóa"}, status=status.HTTP_200_OK)
+
+from django.shortcuts import get_object_or_404
+
+def update_premium_status(user_id, is_premium):
+    """
+    Cập nhật trạng thái premium của người dùng.
+    
+    :param user_id: ID của người dùng cần cập nhật.
+    :param is_premium: Giá trị True (đăng ký Premium) hoặc False (hủy Premium).
+    :return: Trả về người dùng sau khi cập nhật hoặc None nếu không tìm thấy.
+    """
+    user = get_object_or_404(NguoiDung, nguoi_dung_id=user_id)
+    user.la_premium = is_premium
+    user.save()
+    return user
