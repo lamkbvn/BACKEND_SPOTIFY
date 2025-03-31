@@ -1,6 +1,7 @@
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 from django.db import models
 from storages.backends.s3boto3 import S3Boto3Storage
+import re
 
 class NguoiDungManager(BaseUserManager):
     """Quản lý người dùng tùy chỉnh"""
@@ -104,16 +105,30 @@ class BaiHat(models.Model):
     loi_bai_hat = models.TextField(blank=True, null=True)
     thoi_luong = models.IntegerField()
     ngay_phat_hanh = models.DateField()
-    is_premium = models.IntegerField()
 
     def save(self, *args, **kwargs):
         if self.file_bai_hat:
             filename = self.file_bai_hat.name
+            filename = filename.replace(" ", "_")
+            
+            # Loại bỏ các ký tự đặc biệt bằng regex
+            filename = re.sub(r"[#;![\]+={}\^$&,()']", "", filename)
+            
             # Nếu tên file không bắt đầu với "songs/", thêm vào
             if not filename.startswith("songs/"):
                 filename = f"songs/{filename}"
-            self.duong_dan = f"https://spotifycloud.s3.amazonaws.com/{filename}"
+            
+            # Kiểm tra phần mở rộng của file và thay đổi URL tương ứng
+            if filename.endswith(".mp4"):
+                self.duong_dan = f"https://spotifycloud.s3.ap-southeast-2.amazonaws.com/{filename}"
+            elif filename.endswith(".mp3"):
+                self.duong_dan = f"https://spotifycloud.s3.amazonaws.com/{filename}"
+            else:
+                # Nếu không phải .mp4 hoặc .mp3, có thể đặt một URL mặc định hoặc làm gì đó khác
+                self.duong_dan = f"https://spotifycloud.s3.amazonaws.com/{filename}"
+
         super().save(*args, **kwargs)
+
 
     def __str__(self):
         return f"{self.ten_bai_hat} - {self.nghe_si.ten_nghe_si}"
