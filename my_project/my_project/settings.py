@@ -18,6 +18,12 @@ import sys
 import os
 from datetime import timedelta
 
+import cloudinary
+import cloudinary.uploader
+import cloudinary.api
+from dotenv import load_dotenv
+load_dotenv()  # Load biến môi trường từ file .env
+
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(BASE_DIR)  # Thêm thư mục gốc vào sys.path
 
@@ -186,6 +192,28 @@ DATABASES = {
         },
     }
 }
+
+
+CLOUDINARY_STORAGE = {
+    'CLOUD_NAME': os.getenv('CLOUD_NAME'),  # ✅ Đúng
+    'API_KEY': os.getenv('API_KEY'),  # ✅ Đúng
+    'API_SECRET': os.getenv('API_SECRET')  # ✅ Đúng
+}
+
+# Kiểm tra nếu thiếu API_KEY thì báo lỗi
+if not CLOUDINARY_STORAGE['API_KEY']:
+    raise ValueError("⚠️ Lỗi: Thiếu API_KEY cho Cloudinary! Kiểm tra file .env hoặc biến môi trường.")
+
+
+print("CLOUD_NAME:", os.getenv('CLOUD_NAME'))
+print("API_KEY:", os.getenv('API_KEY'))
+print("API_SECRET:", os.getenv('API_SECRET'))
+
+cloudinary.config( 
+    cloud_name=CLOUDINARY_STORAGE['CLOUD_NAME'], 
+    api_key=CLOUDINARY_STORAGE['API_KEY'], 
+    api_secret=CLOUDINARY_STORAGE['API_SECRET']
+)
 
 
 # Password validation
