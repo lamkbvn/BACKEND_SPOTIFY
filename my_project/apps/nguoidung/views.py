@@ -104,45 +104,50 @@ def login(request):
     email = request.data.get('email')
     password = request.data.get('password')
 
+    if not email or not password:
+        return Response({'error': 'Vui lòng nhập email và mật khẩu'}, status=400)
+
     email = email.strip().lower()  # Chuẩn hóa email
     print(email)
+
     try:
         nguoidung = NguoiDung.objects.get(email=email)
     except NguoiDung.DoesNotExist:
         return Response({'error': 'Không tìm thấy tài khoản với email này'}, status=404)
 
-    if not check_password(password, nguoidung.password):  # Đảm bảo bạn lưu mật khẩu đã mã hóa trong DB
+    if not check_password(password, nguoidung.password):
         return Response({'error': 'Sai mật khẩu'}, status=400)
+
     # Tạo JWT token
     refresh = RefreshToken.for_user(nguoidung)
     access_token = str(refresh.access_token)
 
     # Thiết lập cookie HttpOnly cho refresh token
-    response = JsonResponse(data ={
-            'message' : 'Dang nhap thanh cong',
-            'refresh' : str(refresh),
-            'access': access_token,  # Access token sẽ được frontend sử dụng
-            'nguoi_dung_id': nguoidung.nguoi_dung_id,
-            'ten_hien_thi': nguoidung.ten_hien_thi,
-            'email': nguoidung.email
-    } , status = 201)
+    response = Response({
+        'message': 'Đăng nhập thành công',
+        'refresh': str(refresh),
+        'access': access_token,
+        'nguoi_dung_id': nguoidung.nguoi_dung_id,
+        'ten_hien_thi': nguoidung.ten_hien_thi,
+        'email': nguoidung.email
+    }, status=201)
 
     response.set_cookie(
-            key="refresh_token",
-            value=str(refresh),
-            httponly=True,  # Bảo mật: Không thể truy cập từ JavaScript
-            secure=True,  # Bật nếu chạy trên HTTPS
-            samesite="Lax",  # Ngăn chặn CSRF , đặt thành none nếu khác domain
-            max_age=7 * 24 * 60 * 60,  # Token sống 7 ngày
+        key="refresh_token",
+        value=str(refresh),
+        httponly=True,
+        secure=True,
+        samesite="Lax",
+        max_age=7 * 24 * 60 * 60
     )
 
     response.set_cookie(
-            key="access_token",
-            value=access_token,
-            httponly=True,  # Bảo mật: Không thể truy cập từ JavaScript
-            secure=True,  # Bật nếu chạy trên HTTPS
-            samesite="Lax",  # Ngăn chặn CSRF , đặt thành none nếu khác domain
-            max_age=7 * 24 * 60 * 60,  # Token sống 7 ngày
+        key="access_token",
+        value=access_token,
+        httponly=True,
+        secure=True,
+        samesite="Lax",
+        max_age=7 * 24 * 60 * 60
     )
 
     return response
