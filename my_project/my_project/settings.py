@@ -76,6 +76,7 @@ DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 
 
 INSTALLED_APPS = [
+    'daphne',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -94,6 +95,7 @@ INSTALLED_APPS = [
     'apps.loaibaihat',
     'apps.album',
     'apps.thanhtoan',
+    'my_project.chat'
 ]
 
 
@@ -122,8 +124,8 @@ REST_FRAMEWORK = {
 from datetime import timedelta
 
 SIMPLE_JWT = {
-    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=10),
-    "REFRESH_TOKEN_LIFETIME": timedelta(minutes=10),
+    "ACCESS_TOKEN_LIFETIME": timedelta(days=7),
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
     "ROTATE_REFRESH_TOKENS": True,  # Tạo refresh token mới khi dùng refresh
     "BLACKLIST_AFTER_ROTATION": True,  # Đưa refresh token cũ vào blacklist sau khi refresh
     "UPDATE_LAST_LOGIN": True,
@@ -215,6 +217,13 @@ cloudinary.config(
     api_secret=CLOUDINARY_STORAGE['API_SECRET']
 )
 
+ASGI_APPLICATION = 'my_project.asgi.application'
+# Nếu sử dụng Redis cho WebSockets
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels.layers.InMemoryChannelLayer",  # Dùng InMemory (dùng Redis thì thay đổi)
+    },
+}
 
 # Password validation
 # https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators
