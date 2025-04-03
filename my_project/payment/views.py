@@ -1,10 +1,11 @@
+import logging
 import time
 import hmac
 import hashlib
 import json
 import uuid
 import requests
-from datetime import datetime
+from datetime import datetime, timedelta
 from django.conf import settings
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework.decorators import api_view, permission_classes
@@ -15,7 +16,11 @@ from django.http import JsonResponse
 import paypalrestsdk
 from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse
-
+from django.utils import timezone
+from apps.common.serializers import ThanhToanSerializer
+from apps.thanhtoan.views import them_thanh_toan  # Nếu ở cùng thư mục
+from rest_framework.request import Request
+from rest_framework.test import APIRequestFactory
 ZALOPAY_CONFIG = {
     "appid": 2554,
     "key1": "sdngKKJmqEMzvh5QQcdD2A9XBSKUNaYn",
@@ -27,19 +32,29 @@ PAYPAL_CONFIG = {
 "PAYPAL_CLIENT_SECRET": "ENj2tLvl0OBZ9abzGCkVbh2EClzfGpSvvvCd_y1fITKI-RbzVSQkEM1ZIf2FhQqDOnnV-jcIQ9x0DmMw"
 }
 
+logger = logging.getLogger(__name__)
+
 @api_view(["POST"])
 @permission_classes([AllowAny])
 def create_zalopay_order(request):
     try:
+        logger.info(f"Received request data: {request.data}")
         data = request.data
         amount = int(data.get("amount", 50000))  # Lấy số tiền từ request
+        user_id = data.get("user_id")
+        
+        if not user_id:
+            logger.error("Missing user_id in request")
+            return Response({"error": "user_id is required"}, status=400)
 
+        logger.info(f"Creating order for user_id: {user_id}, amount: {amount}")
+        
         # Tạo thông tin đơn hàng
         order = {
             "appid": ZALOPAY_CONFIG["appid"],
-            "apptransid": "{:%y%m%d}_{}".format(datetime.today(), uuid.uuid4()),  # Định dạng: yyMMdd_xxxx
-            "appuser": "demo",
-            "apptime": int(time.time() * 1000),  # Milliseconds
+            "apptransid": "{:%y%m%d}_{}".format(datetime.today(), uuid.uuid4()),
+            "appuser": str(user_id),
+            "apptime": int(time.time() * 1000),
             "embeddata": json.dumps({"merchantinfo": "embeddata123"}, separators=(',', ':')),
             "item": json.dumps([{"itemid": "knb", "itemname": "kim nguyen bao", "itemprice": amount, "itemquantity": 1}], separators=(',', ':')),
             "amount": amount,
@@ -54,25 +69,81 @@ def create_zalopay_order(request):
         )
         order["mac"] = hmac.new(ZALOPAY_CONFIG["key1"].encode(), data_sign.encode(), hashlib.sha256).hexdigest()
 
+        logger.info(f"Sending order to ZaloPay: {order}")
+        
         # Gửi request lên ZaloPay
         response = requests.post(ZALOPAY_CONFIG["endpoint"], data=order)
+        response_data = response.json()
+        logger.info(f"ZaloPay response: status_code={response.status_code}, data={response_data}")
 
-        if response.status_code != 200:
-            return Response({"error": "Invalid response from ZaloPay", "detail": response.text}, status=400)
+        # Kiểm tra kết quả từ ZaloPay
+        if response.status_code == 200 and response_data.get("returncode") == 1:
+            logger.info("ZaloPay transaction successful, saving payment data")
+            goi_premium_id = 1
+            so_ngay_hieu_luc = 30
 
-        return Response(response.json())  # Trả về JSON response từ ZaloPay
+            thanh_toan_data = {
+                "nguoi_dung": user_id,
+                "goi_premium": goi_premium_id,
+                "so_tien": amount,
+                "phuong_thuc": "ZaloPay",
+                "ngay_thanh_toan": timezone.now(),
+                "ngay_het_han": timezone.now() + timedelta(days=so_ngay_hieu_luc),
+                "tu_dong_gia_han": False,
+                "is_active": True
+            }
 
+            serializer = ThanhToanSerializer(data=thanh_toan_data)
+            if serializer.is_valid():
+                serializer.save()
+                logger.info("Payment data saved successfully")
+                return Response(response_data)
+            else:
+                logger.error(f"Serializer errors: {serializer.errors}")
+                return Response({"error": "Failed to save payment", "detail": serializer.errors}, status=400)
+
+        logger.error(f"ZaloPay transaction failed: {response_data}")
+        return Response({"error": "ZaloPay transaction failed", "detail": response_data}, status=400)
+
+    except ValueError as e:
+        logger.error(f"ValueError: {str(e)} - Likely invalid amount")
+        return Response({"error": "Invalid amount value"}, status=400)
     except Exception as e:
+        logger.error(f"Unexpected error: {str(e)}")
         return Response({"error": str(e)}, status=400)
 @api_view(["POST"])
 @permission_classes([AllowAny])
 def zalopay_callback(request):
     try:
         data = request.data
-        return_code = data.get("return_code", -1)
-        if return_code == 1:
-            # Xử lý khi thanh toán thành công (Cập nhật trạng thái đơn hàng)
-            return Response({"return_code": 1, "return_message": "Success"})
+        print(data)
+        return_code = data.get("returncode", -1)
+        appuser = data.get("appuser")  # Lấy user_id từ appuser
+        amount = data.get("amount", 0)
+        if return_code == 1 and appuser:
+            from datetime import timedelta
+            # Giả sử appuser là ID người dùng và gói premium mặc định là ID 1
+            goi_premium_id = 1  # ID của gói premium, bạn có thể lấy từ request hoặc đặt mặc định
+            so_ngay_hieu_luc = 30  # Ví dụ: gói premium có hiệu lực 30 ngày
+
+            thanh_toan_data = {
+                "nguoi_dung": appuser,  # ID người dùng
+                "goi_premium": goi_premium_id,  # Gói premium
+                "so_tien": amount,
+                "phuong_thuc": "ZaloPay",
+                "ngay_thanh_toan": timezone.now(),
+                "ngay_het_han": timezone.now() + timedelta(days=so_ngay_hieu_luc),
+                "tu_dong_gia_han": False,  # Hoặc lấy từ request nếu có
+                "is_active": True  # Thanh toán thành công => active
+            }
+
+            serializer = ThanhToanSerializer(data=thanh_toan_data)
+            if serializer.is_valid():
+                response = them_thanh_toan(request=Request(request, data=thanh_toan_data))
+                return Response({"return_code": 1, "return_message": "Success"})
+            else:
+                return Response({"return_code": -1, "return_message": serializer.errors})
+
         return Response({"return_code": -1, "return_message": "Failure"})
     except Exception as e:
         return Response({"return_code": -1, "return_message": str(e)})
