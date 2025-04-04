@@ -180,8 +180,11 @@ def login(request):
 @api_view(['GET'])
 def get_access_token(request):
     access_token = request.COOKIES.get("access_token")
-    print(request.COOKIES)
-    return Response({"access_token": access_token} , status = status.HTTP_200_OK)
+
+    if not access_token:  # Kiểm tra nếu access_token là None hoặc chuỗi rỗng
+        return Response({"message": "Bạn chưa đăng nhập"}, status=status.HTTP_401_UNAUTHORIZED)
+
+    return Response({"access_token": access_token}, status=status.HTTP_200_OK)
 
 from django.utils.timezone import now
 from datetime import timedelta
@@ -319,13 +322,22 @@ def password_reset_confirm(request, uidb64, token):
     except (NguoiDung.DoesNotExist, ValueError):
         return Response({'error': 'Invalid request'}, status=status.HTTP_400_BAD_REQUEST)
 
+
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])  # Chỉ cho phép người đã đăng nhập
 def thong_tin_nguoi_dung(request):
-    user = request.user
+    # Lấy id từ query param (nếu có)
+    nguoi_dung_id = request.query_params.get("id")
 
-    # if not user.is_authenticated:
-    #     return Response({"error": "Người dùng chưa đăng nhập!"}, status=status.HTTP_401_UNAUTHORIZED)
+    if nguoi_dung_id:
+        # Nếu có id trong query param, tìm người dùng với id đó
+        try:
+            user = NguoiDung.objects.get(nguoi_dung_id=nguoi_dung_id)
+        except NguoiDung.DoesNotExist:
+            return Response({"error": "Không tìm thấy người dùng với id này!"}, status=status.HTTP_404_NOT_FOUND)
+    else:
+        # Nếu không có id, sử dụng thông tin của người dùng đã đăng nhập (request.user)
+        user = request.user
 
     return Response({
         "id": user.nguoi_dung_id,
@@ -333,8 +345,9 @@ def thong_tin_nguoi_dung(request):
         "ten_hien_thi": user.ten_hien_thi,
         "gioi_tinh": user.gioi_tinh,
         "ngay_sinh": user.ngay_sinh,
-        "avatar_url" : user.avatar_url
-    } , status = status.HTTP_200_OK)
+        "avatar_url": user.avatar_url
+    }, status=status.HTTP_200_OK)
+
 
 @api_view(['GET'])
 @permission_classes([IsAdminUser])  # Dùng IsAdminUser thay cho AllowAny để chỉ admin mới có thể xem danh sách
