@@ -19,6 +19,25 @@ def them_thanh_toan(request):
         return Response({"message": "Thanh toán đã được thêm thành công!", "data": serializer.data}, status=status.HTTP_201_CREATED)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+@permission_classes([AllowAny])
+def them_thanh_toan_internal(data):
+    """
+    Hàm nội bộ để thêm thanh toán, không yêu cầu request.
+    """
+    serializer = ThanhToanSerializer(data=data)
+    if serializer.is_valid():
+        serializer.save()
+        # update_premium_status(data['nguoi_dung'], True)  # Cập nhật trạng thái premium
+        return {
+            "success": True,
+            "message": "Thanh toán đã được thêm thành công!",
+            "data": serializer.data
+        }
+    return {
+        "success": False,
+        "errors": serializer.errors
+    }
+
 # 🔵 Lấy danh sách thanh toán (có phân trang & tìm kiếm)
 @api_view(['GET'])
 @permission_classes([AllowAny])

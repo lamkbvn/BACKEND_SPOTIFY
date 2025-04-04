@@ -21,6 +21,7 @@ from apps.common.serializers import ThanhToanSerializer
 from apps.thanhtoan.views import them_thanh_toan  # Nếu ở cùng thư mục
 from rest_framework.request import Request
 from rest_framework.test import APIRequestFactory
+from apps.thanhtoan.views import them_thanh_toan_internal
 ZALOPAY_CONFIG = {
     "appid": 2554,
     "key1": "sdngKKJmqEMzvh5QQcdD2A9XBSKUNaYn",
@@ -260,49 +261,6 @@ paypalrestsdk.configure({
 })
 
 
-@csrf_exempt
-def create_paypal_order(request):
-    if request.method == 'POST':
-        print("➡️ Received POST request to create PayPal order.")
-        try:
-            data = json.loads(request.body)
-            print(f"📦 Request data: {data}")
-            amount = data.get('amount')
-            print(f"💵 Payment amount: {amount} USD")
-
-            payment = paypalrestsdk.Payment({
-                "intent": "sale",
-                "payer": {"payment_method": "paypal"},
-                "redirect_urls": {
-                    "return_url": "http://localhost:3000/success",  # frontend
-                    "cancel_url": "http://localhost:3000/cancel"
-                },
-                "transactions": [{
-                    "amount": {
-                        "total": str(amount),
-                        "currency": "USD"
-                    },
-                    "description": "Payment description"
-                }]
-            })
-
-            print("📤 Sending payment creation request to PayPal...")
-            if payment.create():
-                print("✅ Payment created successfully.")
-                for link in payment.links:
-                    print(f"🔗 Found link: rel={link.rel}, href={link.href}")
-                    if link.rel == "approval_url":
-                        print(f"➡️ Returning approval URL: {link.href}")
-                        return JsonResponse({"approval_url": link.href})
-                print("⚠️ No approval_url found in payment.links.")
-                return JsonResponse({"error": "No approval URL found."}, status=400)
-            else:
-                print(f"❌ Payment creation failed: {payment.error}")
-                return JsonResponse({"error": payment.error}, status=400)
-        except Exception as e:
-            print(f"❗ Exception occurred: {str(e)}")
-            return JsonResponse({"error": str(e)}, status=500)
-
 
 @csrf_exempt
 def capture_paypal_order(request):
@@ -329,3 +287,120 @@ def capture_paypal_order(request):
         except Exception as e:
             print(f"❗ Exception occurred: {str(e)}")
             return JsonResponse({"error": str(e)}, status=500)
+      
+
+@csrf_exempt
+def create_paypal_order(request):
+    if request.method == 'POST':
+        print("➡️ Received POST request to create PayPal order.")
+        try:
+            data = json.loads(request.body)
+            amount = data.get('amount')
+            idNguoiDung = data.get('idNguoiDung')
+
+            payment = paypalrestsdk.Payment({
+                "intent": "sale",
+                "payer": {"payment_method": "paypal"},
+                "redirect_urls": {
+                    "return_url": 'http://localhost:8000/api/paypal/success?idNguoiDung='+idNguoiDung,  # frontend
+                    "cancel_url": "http://localhost:5173/premium"
+                },
+                "transactions": [{
+                    "amount": {
+                        "total": str(amount),
+                        "currency": "USD"
+                    },
+                    "description": "Payment description"
+                }]
+            })
+
+            if payment.create():
+                for link in payment.links:
+                    if link.rel == "approval_url":
+                        print(f"➡️ Returning approval URL: {link.href}")
+                        return JsonResponse({"approval_url": link.href})
+                print("⚠️ No approval_url found in payment.links.")
+                return JsonResponse({"error": "No approval URL found."}, status=400)
+            else:
+                print(f"❌ Payment creation failed: {payment.error}")
+                return JsonResponse({"error": payment.error}, status=400)
+        except Exception as e:
+            print(f"❗ Exception occurred: {str(e)}")
+            return JsonResponse({"error": str(e)}, status=500)
+          
+from django.shortcuts import redirect
+@csrf_exempt
+def paypal_success(request):
+    if request.method == 'GET':
+        try:
+            payment_id = request.GET.get('paymentId')
+            payer_id = request.GET.get('PayerID')
+            idNguoiDung = request.GET.get('idNguoiDung')
+
+
+            if not payment_id or not payer_id:
+                return JsonResponse({"error": "Missing paymentId or PayerID"}, status=400)
+
+            # Lấy thông tin thanh toán từ PayPal
+            payment = paypalrestsdk.Payment.find(payment_id)
+
+            if payment.execute({"payer_id": payer_id}):
+
+                # Gọi hàm lưu thông tin thanh toán
+                xu_ly_thanh_toan_paypal(payment_id, payer_id, idNguoiDung)
+                
+                 # Redirect về trang chính sau khi thanh toán thành công
+                # Truyền thông báo thành công thông qua URL hoặc session
+                return redirect(f'http://localhost:5173/premium?success=true&idNguoiDung={idNguoiDung}')
+            else:
+                print(f"❌ Payment execution failed: {payment.error}")
+                return JsonResponse({"error": payment.error}, status=400)
+        except Exception as e:
+            print(f"❗ Error processing PayPal payment: {str(e)}")
+            return JsonResponse({"error": str(e)}, status=500)
+
+from apps.common.models import NguoiDung, GoiPremium, ThanhToan
+
+
+def xu_ly_thanh_toan_paypal(payment_id, payer_id, user_id):
+    """
+    Xử lý thanh toán sau khi nhận phản hồi từ PayPal
+    """
+    try:
+        # Retrieve user and premium package
+        nguoi_dung = NguoiDung.objects.get(nguoi_dung_id=user_id)
+       
+        goi_premium = GoiPremium.objects.get(goi_premium_id=1)  # Assume gói mặc định with id 1
+        
+        # Calculate expiration date for the package (assuming 30 days for premium)
+        ngay_hien_tai = datetime.now()
+        ngay_het_han = ngay_hien_tai + timedelta(days=goi_premium.thoi_han)
+        
+        # Prepare payment data
+        payment_data = {
+            "nguoi_dung": nguoi_dung,  # Use the actual user object
+            "goi_premium": goi_premium,  # Use the actual premium package object
+            "phuong_thuc": "PayPal",
+            "so_tien": goi_premium.gia,  # Assuming 'gia' is the price
+            "ngay_het_han": ngay_het_han,
+            "tu_dong_gia_han": False,
+            "is_active": True,
+        }
+
+        # Save the payment information
+        payment = ThanhToan.objects.create(**payment_data)
+        nguoi_dung.is_premium = True
+        nguoi_dung.save()
+        return {"status": "success", "message": "Thanh toán thành công!"}
+    
+    except NguoiDung.DoesNotExist:
+        print("❌ Người dùng không tồn tại")
+        return {"status": "error", "message": "Người dùng không tồn tại"}
+    
+    except GoiPremium.DoesNotExist:
+        print("❌ Gói Premium không tồn tại")
+        return {"status": "error", "message": "Gói Premium không tồn tại"}
+    
+    except Exception as e:
+        print(f"❗ Error processing payment: {str(e)}")
+        return {"status": "error", "message": str(e)}
