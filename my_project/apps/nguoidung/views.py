@@ -155,7 +155,8 @@ def login(request):
             # 'nguoi_dung_id': nguoidung.nguoi_dung_id,
             'ten_hien_thi': nguoidung.ten_hien_thi,
             # 'email': nguoidung.email,
-            'idLogin' : nguoidung.nguoi_dung_id
+            'idLogin' : nguoidung.nguoi_dung_id,
+            'isStaff' :  nguoidung.is_staff
     } , status = 201)
 
     response.set_cookie(
