@@ -99,11 +99,6 @@ def find_lyric_start_time(audio_file_path):
     
     return start_time
 
-# Ví dụ gọi hàm với đường dẫn file MP3
-audio_file_path = r'D:\Downloads\aaxxx.mp3'
-start_time = find_lyric_start_time(audio_file_path)
-print(f"Thời điểm bắt đầu lời bài hát: {start_time} giây")
-
       
 @api_view(['POST'])
 def sync_lyrics(request):
