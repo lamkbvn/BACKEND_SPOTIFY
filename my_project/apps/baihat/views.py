@@ -13,7 +13,11 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from django.conf import settings
 from django.http import JsonResponse
-import numpy as np 
+import numpy as np
+
+from shazamio import Shazam
+import tempfile
+import asyncio
 
 @api_view(['POST'])
 def sync_lyrics(request):
@@ -287,3 +291,38 @@ def search_album(request):
     # Trả về dữ liệu album
     album_serializer = AlbumSerializer(albums, many=True)
     return Response(album_serializer.data, status=status.HTTP_200_OK)
+
+async def find_song_shazam(audio_file):
+    """Nhận diện bài hát bằng Shazam."""
+    shazam = Shazam()
+    try:
+        # Lưu audio_file vào tệp tạm thời
+        with tempfile.NamedTemporaryFile(delete=False) as tmp_file:
+            for chunk in audio_file.chunks():
+                tmp_file.write(chunk)
+            temp_file_path = tmp_file.name  # Lấy đường dẫn file tạm thời
+
+        out = await shazam.recognize_song(temp_file_path)
+
+        # Xóa file tạm thời sau khi nhận diện xong
+        os.remove(temp_file_path)
+
+        return out
+    except Exception as e:
+        print(f"Shazam error for {audio_file}: {e}")
+        return {"error": str(e)}
+
+@api_view(['POST'])
+def upload_audio(request):
+    if 'audio' not in request.FILES:
+        return Response({'error': 'No audio file provided.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    audio_file = request.FILES['audio']
+
+    # Nhận diện bài hát bằng Shazam (chạy bất đồng bộ)
+    shazam_info = asyncio.run(find_song_shazam(audio_file))
+
+    return Response({
+        'message': 'Audio file uploaded and processed successfully!',
+        'shazam_info': shazam_info
+    }, status=status.HTTP_201_CREATED)
