@@ -98,6 +98,7 @@ INSTALLED_APPS = [
     'apps.loaibaihat',
     'apps.album',
     'apps.thanhtoan',
+    'apps.baihat',
     'my_project.chat'
 ]
 
