@@ -351,3 +351,45 @@ def get_bai_hat_theo_album(request):
 
     except:
         return Response({"error": "Album not found."}, status=404)
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def get_so_luong_bai_hat(request):
+    try:
+        so_luong = BaiHat.objects.count()
+        return Response({"so_luong_bai_hat": so_luong}, status=status.HTTP_200_OK)
+    except Exception as e:
+        return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
+    
+from django.db.models.functions import ExtractMonth
+from django.db.models import Count
+from datetime import datetime
+def thong_ke_bai_hat_theo_thang(nam):
+    ket_qua = (
+        BaiHat.objects
+        .filter(ngay_phat_hanh__year=nam)
+        .annotate(thang=ExtractMonth('ngay_phat_hanh'))
+        .values('thang')
+        .annotate(so_luong=Count('bai_hat_id'))
+        .order_by('thang')
+    )
+    
+    # Tạo list 12 tháng đầy đủ (nếu tháng nào không có thì giá trị là 0)
+    du_lieu_thong_ke = []
+    for i in range(1, 13):
+        bai_hat_thang = next((item for item in ket_qua if item['thang'] == i), None)
+        du_lieu_thong_ke.append({
+            "thang": i,
+            "so_luong": bai_hat_thang['so_luong'] if bai_hat_thang else 0
+        })
+
+    return du_lieu_thong_ke
+
+from django.http import JsonResponse
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def thong_ke_bai_hat_view(request):
+    nam = request.GET.get('nam', datetime.now().year)  # Mặc định là năm hiện tại
+    du_lieu = thong_ke_bai_hat_theo_thang(int(nam))
+    return JsonResponse(du_lieu, safe=False)

@@ -397,3 +397,25 @@ def update_premium_status(user_id, is_premium):
     user.la_premium = is_premium
     user.save()
     return user
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def get_so_luong_nguoi_dung(request):
+    try:
+        so_luong = NguoiDung.objects.count()
+        return Response({"so_luong_nguoi_dung": so_luong}, status=status.HTTP_200_OK)
+    except Exception as e:
+        return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def get_so_luong_nguoi_dung_premium(request):
+    so_luong_premium = NguoiDung.objects.filter(la_premium=True).count()
+    so_luong_khong_premium = NguoiDung.objects.filter(la_premium=False).count()
+    tong_nguoi_dung = so_luong_premium + so_luong_khong_premium
+
+    return Response({
+        "tong_nguoi_dung": tong_nguoi_dung,
+        "so_luong_premium": so_luong_premium,
+        "so_luong_khong_premium": so_luong_khong_premium
+    })
