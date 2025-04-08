@@ -14,4 +14,5 @@ urlpatterns = [
     path('timkiemtheogiaidieu/', upload_audio, name='upload_audio'),
     path('album/timkiem/', search_album, name='search_album'),
     path('api/sync-lyrics/', sync_lyrics, name='sync-lyrics'), 
+    path('album/getbaihat/', get_bai_hat_theo_album, name='get_bai_hat_theo_album'),
 ]

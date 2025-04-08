@@ -271,6 +271,7 @@ def upload_audio(request):
     }, status=status.HTTP_201_CREATED)
 
 @api_view(['GET'])
+@permission_classes([AllowAny])
 def get_bai_hat_theo_album(request):
     try:
         album_id = request.GET.get('albumid')

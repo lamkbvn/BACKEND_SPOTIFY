@@ -60,13 +60,16 @@ def get_danh_sach_bai_hat_theo_bxh_name(request, ten_baxh):
     danh_sach_bai_hat = []
 
     for bai_hat in bai_hat_list:
+        so_luot_nghe = LichSuNghe.objects.filter(bai_hat_id=bai_hat.bai_hat_id).count()
         item = {
             "bai_hat_trong_danh_sach_id": None,
             "ngay_them": None,
             "danh_sach_phat": None,  # Nếu có
             "bai_hat": bai_hat.bai_hat_id,  # ID bài hát
+            "so_luot_nghe": so_luot_nghe,
         }
         danh_sach_bai_hat.append(item)
+    danh_sach_bai_hat.sort(key=lambda x: x['so_luot_nghe'], reverse=True)
 
     return Response({"danh_sach_bai_hat": danh_sach_bai_hat})
 
