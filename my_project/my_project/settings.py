@@ -21,8 +21,8 @@ from datetime import timedelta
 import cloudinary
 import cloudinary.uploader
 import cloudinary.api
-from dotenv import load_dotenv
-load_dotenv()  # Load biến môi trường từ file .env
+# from dotenv import load_dotenv
+# load_dotenv()  # Load biến môi trường từ file .env
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(BASE_DIR)  # Thêm thư mục gốc vào sys.path
@@ -35,15 +35,18 @@ sys.path.append(BASE_DIR)  # Thêm thư mục gốc vào sys.path
 SECRET_KEY = 'django-insecure-^5ykhf20%@!1rrc_j!p8(0!#5i2fv9f1rswm^8mjo+#qqq@t__'
 
 # SECURITY WARNING: don't run with debug turned on in production!
+
 DEBUG = True
 
-# ALLOWED_HOSTS = ['*']
+
+print("DEBUG:", DEBUG)
+# print("ALLOWED_HOSTS:", ALLOWED_HOSTS)
 
 AUTH_USER_MODEL = "common.NguoiDung"  # Đổi "ten_app" thành tên app của bạn
 
 CORS_ALLOW_CREDENTIALS = True  # Cho phép gửi cookie
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:5173",  # Địa chỉ frontend
+    "http://localhost:5173",
     "https://sandbox.vnpayment.vn",
 ]
 CORS_ALLOW_HEADERS = [
@@ -95,6 +98,7 @@ INSTALLED_APPS = [
     'apps.loaibaihat',
     'apps.album',
     'apps.thanhtoan',
+    'apps.baihat',
     'my_project.chat'
 ]
 
@@ -196,27 +200,6 @@ DATABASES = {
 }
 
 
-CLOUDINARY_STORAGE = {
-    'CLOUD_NAME': os.getenv('CLOUD_NAME'),  # ✅ Đúng
-    'API_KEY': os.getenv('API_KEY'),  # ✅ Đúng
-    'API_SECRET': os.getenv('API_SECRET')  # ✅ Đúng
-}
-
-# Kiểm tra nếu thiếu API_KEY thì báo lỗi
-if not CLOUDINARY_STORAGE['API_KEY']:
-    raise ValueError("⚠️ Lỗi: Thiếu API_KEY cho Cloudinary! Kiểm tra file .env hoặc biến môi trường.")
-
-
-print("CLOUD_NAME:", os.getenv('CLOUD_NAME'))
-print("API_KEY:", os.getenv('API_KEY'))
-print("API_SECRET:", os.getenv('API_SECRET'))
-
-cloudinary.config( 
-    cloud_name=CLOUDINARY_STORAGE['CLOUD_NAME'], 
-    api_key=CLOUDINARY_STORAGE['API_KEY'], 
-    api_secret=CLOUDINARY_STORAGE['API_SECRET']
-)
-
 ASGI_APPLICATION = 'my_project.asgi.application'
 # Nếu sử dụng Redis cho WebSockets
 CHANNEL_LAYERS = {
@@ -272,3 +255,25 @@ VNPAY_CONFIG = {
     "VNPAY_HASH_SECRET": "YWR73YZ0QF1JVDMQHTQ3T4LFY0OZEBHQ",  # Thay bằng Secret Key của bạn
     "VNPAY_RETURN_URL": "http://127.0.0.1:8000/api/vnpay/return/",
 }
+
+
+import cloudinary
+from cloudinary import config
+
+CLOUDINARY_STORAGE = {
+    'CLOUD_NAME': 'dnf9ertfk',
+    'API_KEY': '225692166758246',
+    'API_SECRET': 'GIRVfZVD0yNxS223cs31R4WzVC8'
+}
+
+# Kiểm tra nếu thiếu API_KEY thì báo lỗi
+if not CLOUDINARY_STORAGE['API_KEY']:
+    raise ValueError("⚠️ Lỗi: Thiếu API_KEY cho Cloudinary! Kiểm tra cấu hình trong settings.py.")
+
+# Cấu hình Cloudinary
+cloudinary.config(
+    cloud_name=CLOUDINARY_STORAGE['CLOUD_NAME'],
+    api_key=CLOUDINARY_STORAGE['API_KEY'],
+    api_secret=CLOUDINARY_STORAGE['API_SECRET']
+)
+
