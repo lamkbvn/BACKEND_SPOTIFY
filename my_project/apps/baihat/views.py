@@ -14,6 +14,7 @@ from rest_framework.response import Response
 from django.conf import settings
 from django.http import JsonResponse
 import numpy as np
+from django.utils.timezone import now
 
 from shazamio import Shazam
 import tempfile
@@ -326,3 +327,27 @@ def upload_audio(request):
         'message': 'Audio file uploaded and processed successfully!',
         'shazam_info': shazam_info
     }, status=status.HTTP_201_CREATED)
+
+@api_view(['GET'])
+def get_bai_hat_theo_album(request):
+    try:
+        album_id = request.GET.get('albumid')
+        # Lấy tất cả bài hát thuộc album_id
+        bai_hat_list = BaiHat.objects.filter(album_id=album_id)
+
+        # Tạo danh sách theo format yêu cầu
+        danh_sach_bai_hat = []
+        for index, bai_hat in enumerate(bai_hat_list, start=1):
+            danh_sach_bai_hat.append({
+                "bai_hat_trong_danh_sach_id": bai_hat.bai_hat_id,       # Fake id tự tăng
+                "ngay_them": now(),                        # Fake ngày thêm
+                "danh_sach_phat": album_id,                # Lấy luôn album id làm "danh_sach_phat"
+                "bai_hat": bai_hat.bai_hat_id              # id bài hát
+            })
+
+        return Response({
+            "danh_sach_bai_hat": danh_sach_bai_hat
+        })
+
+    except:
+        return Response({"error": "Album not found."}, status=404)
