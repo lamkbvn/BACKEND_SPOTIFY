@@ -326,3 +326,13 @@ def upload_audio(request):
         'message': 'Audio file uploaded and processed successfully!',
         'shazam_info': shazam_info
     }, status=status.HTTP_201_CREATED)
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def get_so_luong_bai_hat(request):
+    try:
+        so_luong = BaiHat.objects.count()
+        return Response({"so_luong_bai_hat": so_luong}, status=status.HTTP_200_OK)
+    except Exception as e:
+        return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
