@@ -107,3 +107,14 @@ def unlock_nghesi(request, id):
         return Response({"message": "Nghệ sĩ đã mở khóa!"}, status=status.HTTP_200_OK)
     except NgheSi.DoesNotExist:
         return Response({"error": "Không tìm thấy nghệ sĩ!"}, status=status.HTTP_404_NOT_FOUND)
+    
+    
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def get_so_luong_nghe_si(request):
+    try:
+        so_luong = NgheSi.objects.count()
+        return Response({"so_luong_nghe_si": so_luong}, status=status.HTTP_200_OK)
+    except Exception as e:
+        return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

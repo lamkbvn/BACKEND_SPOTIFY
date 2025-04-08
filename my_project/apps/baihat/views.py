@@ -14,6 +14,7 @@ from rest_framework.response import Response
 from django.conf import settings
 from django.http import JsonResponse
 import numpy as np
+from django.utils.timezone import now
 
 from shazamio import Shazam
 import tempfile
@@ -23,11 +24,8 @@ import requests
 @api_view(['POST'])
 def sync_lyrics(request):
     # Nhận đường link file mp3 và lời bài hát từ request
-    print("DATAaaaaaaaaaaaaa:")
-
     audio_url = request.data.get('audio_url')
     lyrics = request.data.get('lyrics')
-    print("DATAaaaaaaaaaaaaa:", audio_url)
 
     if not audio_url:
         return Response({"error": "No audio URL provided"}, status=400)
@@ -271,3 +269,69 @@ def upload_audio(request):
         'message': 'Audio file uploaded and processed successfully!',
         'shazam_info': shazam_info
     }, status=status.HTTP_201_CREATED)
+
+@api_view(['GET'])
+def get_bai_hat_theo_album(request):
+    try:
+        album_id = request.GET.get('albumid')
+        # Lấy tất cả bài hát thuộc album_id
+        bai_hat_list = BaiHat.objects.filter(album_id=album_id)
+
+        # Tạo danh sách theo format yêu cầu
+        danh_sach_bai_hat = []
+        for index, bai_hat in enumerate(bai_hat_list, start=1):
+            danh_sach_bai_hat.append({
+                "bai_hat_trong_danh_sach_id": bai_hat.bai_hat_id,       # Fake id tự tăng
+                "ngay_them": now(),                        # Fake ngày thêm
+                "danh_sach_phat": album_id,                # Lấy luôn album id làm "danh_sach_phat"
+                "bai_hat": bai_hat.bai_hat_id              # id bài hát
+            })
+
+        return Response({
+            "danh_sach_bai_hat": danh_sach_bai_hat
+        })
+
+    except:
+        return Response({"error": "Album not found."}, status=404)
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def get_so_luong_bai_hat(request):
+    try:
+        so_luong = BaiHat.objects.count()
+        return Response({"so_luong_bai_hat": so_luong}, status=status.HTTP_200_OK)
+    except Exception as e:
+        return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
+    
+from django.db.models.functions import ExtractMonth
+from django.db.models import Count
+from datetime import datetime
+def thong_ke_bai_hat_theo_thang(nam):
+    ket_qua = (
+        BaiHat.objects
+        .filter(ngay_phat_hanh__year=nam)
+        .annotate(thang=ExtractMonth('ngay_phat_hanh'))
+        .values('thang')
+        .annotate(so_luong=Count('bai_hat_id'))
+        .order_by('thang')
+    )
+    
+    # Tạo list 12 tháng đầy đủ (nếu tháng nào không có thì giá trị là 0)
+    du_lieu_thong_ke = []
+    for i in range(1, 13):
+        bai_hat_thang = next((item for item in ket_qua if item['thang'] == i), None)
+        du_lieu_thong_ke.append({
+            "thang": i,
+            "so_luong": bai_hat_thang['so_luong'] if bai_hat_thang else 0
+        })
+
+    return du_lieu_thong_ke
+
+from django.http import JsonResponse
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def thong_ke_bai_hat_view(request):
+    nam = request.GET.get('nam', datetime.now().year)  # Mặc định là năm hiện tại
+    du_lieu = thong_ke_bai_hat_theo_thang(int(nam))
+    return JsonResponse(du_lieu, safe=False)
