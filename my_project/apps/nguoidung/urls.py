@@ -1,7 +1,7 @@
 from django.urls import path
 from .views import them_nguoi_dung, cap_nhat_nguoi_dung, login, logout, refresh_token, request_password_reset, \
     password_reset_confirm, danh_sach_nguoi_dung, chi_tiet_nguoi_dung, khoa_tai_khoan, \
-    get_access_token, thong_tin_nguoi_dung, get_so_luong_nguoi_dung
+    get_access_token, thong_tin_nguoi_dung, get_so_luong_nguoi_dung, get_so_luong_nguoi_dung_premium
 
 urlpatterns = [
     path('api/them-nguoi-dung/', them_nguoi_dung, name='them-nguoi-dung'),
@@ -17,6 +17,7 @@ urlpatterns = [
     path('api/chi-tiet-nguoi-dung/<int:nguoi_dung_id>/', chi_tiet_nguoi_dung, name='chi-tiet-nguoi-dung'),
     path('api/khoa-tai-khoan/<int:nguoi_dung_id>/lock/', khoa_tai_khoan, name='khoa-tai-khoan'),
     path('api/get-so-luong-nguoi-dung/', get_so_luong_nguoi_dung, name='get-so-luong-nguoi-dung'),
+    path('api/nguoidung/thongkepremium/', get_so_luong_nguoi_dung_premium, name='get_so_luong_nguoi_dung_premium'),
 ]
 
 

@@ -1,7 +1,7 @@
 # urls.py
 from django.urls import path
 from .views import them_baihat, get_baihat, get_baihat_by_id, get_loi_bai_hat, update_baihat, delete_baihat, \
-    search_baihat, search_album, sync_lyrics, upload_audio, get_so_luong_bai_hat
+    search_baihat, search_album, sync_lyrics, upload_audio, get_so_luong_bai_hat, thong_ke_bai_hat_view
 
 urlpatterns = [
     path('baihat/', get_baihat, name='get_baihat'),
@@ -14,5 +14,6 @@ urlpatterns = [
     path('timkiemtheogiaidieu/', upload_audio, name='upload_audio'),
     path('album/timkiem/', search_album, name='search_album'),
     path('api/sync-lyrics/', sync_lyrics, name='search_album'), 
-    path('api/get-so-luong-bai-hat/', get_so_luong_bai_hat, name='get-so-luong-bai-hat')
+    path('api/get-so-luong-bai-hat/', get_so_luong_bai_hat, name='get-so-luong-bai-hat'),
+    path('api/thong_ke_bai_hat/', thong_ke_bai_hat_view, name='thong_ke_bai_hat_view')
 ]
