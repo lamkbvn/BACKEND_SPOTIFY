@@ -11,7 +11,7 @@ import cloudinary.uploader
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def them_danhsachphat(request):
-    data = request.data.copy()  # Sao chép dữ liệu từ request
+    data = request.data  # Sao chép dữ liệu từ request
 
     # Kiểm tra xem có ảnh không
     if 'anh_danh_sach' in request.FILES:

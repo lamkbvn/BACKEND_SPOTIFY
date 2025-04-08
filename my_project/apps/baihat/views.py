@@ -18,63 +18,75 @@ import numpy as np
 from shazamio import Shazam
 import tempfile
 import asyncio
+import requests
 
 @api_view(['POST'])
 def sync_lyrics(request):
-    # Nhận file mp3 từ request
-    audio_file = request.FILES.get('audio')
-    lyrics = request.data.get('lyrics')  # Nhận lời bài hát từ request
-    
-    if not audio_file:
-        return JsonResponse({"error": "No audio file provided"}, status=400)
+    # Nhận đường link file mp3 và lời bài hát từ request
+    print("DATAaaaaaaaaaaaaa:")
+
+    audio_url = request.data.get('audio_url')
+    lyrics = request.data.get('lyrics')
+    print("DATAaaaaaaaaaaaaa:", audio_url)
+
+    if not audio_url:
+        return Response({"error": "No audio URL provided"}, status=400)
     if not lyrics:
-        return JsonResponse({"error": "No lyrics provided"}, status=400)
-    
-    # Lưu file mp3 tạm thời
-    fs = FileSystemStorage()
-    audio_path = fs.save(audio_file.name, audio_file)
-    
-    # Lấy đường dẫn thực tế của tệp âm thanh
-    audio_file_path = os.path.join(settings.MEDIA_ROOT, audio_path)
-    
-    # Giải mã URL encoding trong tên tệp
-    audio_file_path = unquote(audio_file_path)
-    
+        return Response({"error": "No lyrics provided"}, status=400)
+
     try:
-        # Tải file âm thanh với Librosa
-        y, sr = librosa.load(audio_file_path, sr=None)
+        # Tải file mp3 từ đường link về file tạm
+        response = requests.get(audio_url, stream=True)
+        if response.status_code != 200:
+            return Response({"error": "Unable to download audio file"}, status=400)
+        
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.mp3') as tmp_file:
+            for chunk in response.iter_content(chunk_size=8192):
+                tmp_file.write(chunk)
+            tmp_file_path = tmp_file.name
+
+        # Dùng librosa để load file
+        y, sr = librosa.load(tmp_file_path, sr=None)
 
         # Tính toán tempo và beat
         tempo, beat_frames = librosa.beat.beat_track(y=y, sr=sr)
         beat_times = librosa.frames_to_time(beat_frames, sr=sr)
 
-        # Bỏ qua beat dạo (giả sử bài hát bắt đầu ở 30s)
-        start_time = 30.0  # Thời gian bắt đầu bài hát tính từ 30s (có thể điều chỉnh nếu cần)
-        beat_times = [time for time in beat_times if time >= start_time]
+        # Phân tích onset (bắt đầu có âm thanh)
+        onset_env = librosa.onset.onset_strength(y=y, sr=sr)
+        onset_times = librosa.onset.onset_detect(onset_envelope=onset_env, sr=sr, units='time')
 
-        # Chia lời bài hát thành các câu
-        lyrics_lines = lyrics.split('\n')
-        
-        # Tính toán timestamp cho mỗi câu
-        num_beats = len(beat_times)
+        first_sound_time = onset_times[0] if len(onset_times) > 0 else 0
+        adjusted_beat_times = beat_times - first_sound_time
+        adjusted_beat_times = adjusted_beat_times[adjusted_beat_times >= 0]  # Lọc bỏ âm âm
+
+        # Xử lý lyrics
+        lyrics_lines = [line.strip() for line in lyrics.split('\n') if line.strip()]
         num_lines = len(lyrics_lines)
-        time_per_line = (beat_times[-1] - start_time) / num_lines  # Thời gian trung bình cho mỗi câu
+
+        if num_lines == 0:
+            return Response({"error": "Lyrics is empty or invalid"}, status=400)
+
+        total_time = adjusted_beat_times[-1] if len(adjusted_beat_times) > 0 else len(y)/sr
+        time_per_line = total_time / num_lines
 
         timestamps = []
         for i, line in enumerate(lyrics_lines):
-            timestamp = start_time + (i * time_per_line)
+            timestamp = round(i * time_per_line, 2)
             timestamps.append({"line": line, "timestamp": timestamp})
 
-        return JsonResponse({"tempo": tempo, "timestamps": timestamps})
+        return Response({
+            "tempo": tempo,
+            "timestamps": timestamps
+        })
+
     except Exception as e:
-        return JsonResponse({"error": str(e)}, status=500)
+        return Response({"error": str(e)}, status=500)
+
     finally:
-        # Kiểm tra tồn tại của file trước khi xóa
-        if os.path.exists(audio_file_path):
-            os.remove(audio_file_path)
-        else:
-            print(f"File not found: {audio_file_path}")
-            
+        # Dọn dẹp file tạm
+        if 'tmp_file_path' in locals() and os.path.exists(tmp_file_path):
+            os.remove(tmp_file_path)       
             
 
 def find_lyric_start_time(audio_file_path):
@@ -103,73 +115,6 @@ def find_lyric_start_time(audio_file_path):
     
     return start_time
 
-      
-@api_view(['POST'])
-def sync_lyrics(request):
-    # Nhận file mp3 từ request
-    audio_file = request.FILES.get('audio')
-    lyrics = request.data.get('lyrics')  # Nhận lời bài hát từ request
-    
-    if not audio_file:
-        return Response({"error": "No audio file provided"}, status=400)
-    if not lyrics:
-        return Response({"error": "No lyrics provided"}, status=400)
-    
-    # Lưu file mp3 tạm thời
-    fs = FileSystemStorage()
-    audio_path = fs.save(audio_file.name, audio_file)
-    
-    # Lấy đường dẫn thực tế của tệp âm thanh
-    audio_file_path = os.path.join(settings.MEDIA_ROOT, audio_path)
-    
-    # Giải mã URL encoding trong tên tệp
-    audio_file_path = unquote(audio_file_path)
-    
-    try:
-        # Tải file âm thanh với Librosa
-        y, sr = librosa.load(audio_file_path, sr=None)
-
-        # Tính toán tempo và beat
-        tempo, beat_frames = librosa.beat.beat_track(y=y, sr=sr)
-        beat_times = librosa.frames_to_time(beat_frames, sr=sr)
-
-        # Tìm thời gian có âm thanh đầu tiên (khi có tiếng hát bắt đầu)
-        onset_env = librosa.onset.onset_strength(y=y, sr=sr)
-        onset_times = librosa.onset.onset_detect(onset_envelope=onset_env, sr=sr, units='time')
-
-        if len(onset_times) > 0:
-            first_sound_time = onset_times[0]
-        else:
-            first_sound_time = 0  # Nếu không có phát hiện âm thanh, giả sử bắt đầu từ 0
-
-        # Điều chỉnh beat_times để bắt đầu từ khi tiếng hát xuất hiện
-        adjusted_beat_times = beat_times - first_sound_time
-
-        # Chia lời bài hát thành các câu
-        lyrics_lines = lyrics.split('\n')
-        
-        # Tính toán timestamp cho mỗi câu
-        num_beats = len(adjusted_beat_times)
-        num_lines = len(lyrics_lines)
-        time_per_line = adjusted_beat_times[-1] / num_lines  # Thời gian trung bình cho mỗi câu
-
-        timestamps = []
-        for i, line in enumerate(lyrics_lines):
-            timestamp = i * time_per_line
-            timestamps.append({"line": line, "timestamp": timestamp})
-
-        return Response({"tempo": tempo, "timestamps": timestamps})
-    
-    except Exception as e:
-        return Response({"error": str(e)}, status=500)
-    
-    finally:
-        # Kiểm tra tồn tại của file trước khi xóa
-        if os.path.exists(audio_file_path):
-            os.remove(audio_file_path)
-        else:
-            print(f"File not found: {audio_file_path}")
-            
 # Tạo bài hát mới
 @api_view(['POST'])
 @permission_classes([AllowAny])

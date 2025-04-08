@@ -13,5 +13,5 @@ urlpatterns = [
     path('baihat/timkiem/', search_baihat, name='search_baihat'), 
     path('timkiemtheogiaidieu/', upload_audio, name='upload_audio'),
     path('album/timkiem/', search_album, name='search_album'),
-    path('api/sync-lyrics/', sync_lyrics, name='search_album'), 
+    path('api/sync-lyrics/', sync_lyrics, name='sync-lyrics'), 
 ]

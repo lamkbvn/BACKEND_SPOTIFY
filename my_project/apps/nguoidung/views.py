@@ -352,7 +352,7 @@ def thong_tin_nguoi_dung(request):
 
 
 @api_view(['GET'])
-@permission_classes([IsAdminUser])  # Dùng IsAdminUser thay cho AllowAny để chỉ admin mới có thể xem danh sách
+@permission_classes([AllowAny])  # Dùng IsAdminUser thay cho AllowAny để chỉ admin mới có thể xem danh sách
 def danh_sach_nguoi_dung(request):
     loai = request.query_params.get('loai', None)  # Lọc theo loại người dùng (premium hoặc thường)
 
