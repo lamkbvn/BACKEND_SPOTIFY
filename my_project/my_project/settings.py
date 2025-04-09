@@ -99,6 +99,7 @@ INSTALLED_APPS = [
     'apps.album',
     'apps.thanhtoan',
     'apps.baihat',
+    'apps.bangxephangbaihat',
     'my_project.chat'
 ]
 

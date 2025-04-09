@@ -11,7 +11,7 @@ import cloudinary.uploader
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def them_danhsachphat(request):
-    data = request.data.copy()  # Sao chép dữ liệu từ request
+    data = request.data  # Sao chép dữ liệu từ request
 
     # Kiểm tra xem có ảnh không
     if 'anh_danh_sach' in request.FILES:
@@ -91,3 +91,12 @@ def delete_danhsachphat(request, id):
         return Response({"message": "Danh sách phát đã được xóa!"}, status=status.HTTP_200_OK)
     except DanhSachPhat.DoesNotExist:
         return Response({"error": "Không tìm thấy danh sách phát!"}, status=status.HTTP_404_NOT_FOUND)
+    
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def get_so_luong_dsp(request):
+    try:
+        so_luong = DanhSachPhat.objects.count()
+        return Response({"so_luong_dsp": so_luong}, status=status.HTTP_200_OK)
+    except Exception as e:
+        return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

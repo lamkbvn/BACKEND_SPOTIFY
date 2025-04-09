@@ -187,7 +187,7 @@ class LichSuNghe(models.Model):
     thoi_luong_nghe = models.IntegerField()  # Tính bằng giây
 
     def __str__(self):
-        return self.lich_su_id
+        return str(self.lich_su_id)
 
 class GoiPremium(models.Model):
     goi_premium_id =  models.BigAutoField(primary_key=True )  # Khóa chính, tự động tăng
