@@ -22,6 +22,7 @@ from apps.thanhtoan.views import them_thanh_toan  # Nếu ở cùng thư mục
 from rest_framework.request import Request
 from rest_framework.test import APIRequestFactory
 from apps.thanhtoan.views import them_thanh_toan_internal
+from apps.nguoidung.views import update_premium_status
 ZALOPAY_CONFIG = {
     "appid": 2554,
     "key1": "sdngKKJmqEMzvh5QQcdD2A9XBSKUNaYn",
@@ -97,6 +98,7 @@ def create_zalopay_order(request):
             serializer = ThanhToanSerializer(data=thanh_toan_data)
             if serializer.is_valid():
                 serializer.save()
+                update_premium_status(user_id, True)
                 logger.info("Payment data saved successfully")
                 return Response(response_data)
             else:
