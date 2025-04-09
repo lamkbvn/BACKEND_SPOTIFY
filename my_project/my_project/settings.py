@@ -201,10 +201,10 @@ DATABASES = {
 
 
 ASGI_APPLICATION = 'my_project.asgi.application'
-# Nếu sử dụng Redis cho WebSockets
+
 CHANNEL_LAYERS = {
     "default": {
-        "BACKEND": "channels.layers.InMemoryChannelLayer",  # Dùng InMemory (dùng Redis thì thay đổi)
+        "BACKEND": "channels.layers.InMemoryChannelLayer",
     },
 }
 
