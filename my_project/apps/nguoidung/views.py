@@ -347,7 +347,8 @@ def thong_tin_nguoi_dung(request):
         "ten_hien_thi": user.ten_hien_thi,
         "gioi_tinh": user.gioi_tinh,
         "ngay_sinh": user.ngay_sinh,
-        "avatar_url": user.avatar_url
+        "avatar_url": user.avatar_url,
+        "la_premium": user.la_premium,
     }, status=status.HTTP_200_OK)
 
 
@@ -419,3 +420,33 @@ def get_so_luong_nguoi_dung_premium(request):
         "so_luong_premium": so_luong_premium,
         "so_luong_khong_premium": so_luong_khong_premium
     })
+
+@api_view(['PATCH'])
+@permission_classes([AllowAny])
+def mo_khoa_tai_khoan(request, nguoi_dung_id):
+    nguoi_dung = get_object_or_404(NguoiDung, pk=nguoi_dung_id)
+
+    if nguoi_dung.is_active:
+        return Response({"message": "Tài khoản đã được kích hoạt trước đó."}, status=status.HTTP_400_BAD_REQUEST)
+
+    nguoi_dung.is_active = True
+    nguoi_dung.save()
+
+    return Response({"message": f"Tài khoản {nguoi_dung.email} đã được mở khóa"}, status=status.HTTP_200_OK)
+
+@api_view(['PATCH'])
+@permission_classes([AllowAny])  # Chỉ admin mới có quyền thay đổi vai trò
+def cap_nhat_vai_tro_nguoi_dung(request, nguoi_dung_id):
+    nguoi_dung = get_object_or_404(NguoiDung, pk=nguoi_dung_id)
+    vai_tro_moi = request.data.get("vai_tro")
+
+    if vai_tro_moi is None:
+        return Response({"error": "Trường 'vai_tro_moi' là bắt buộc."}, status=status.HTTP_400_BAD_REQUEST)
+
+    nguoi_dung.is_staff = vai_tro_moi
+    nguoi_dung.save()
+
+    return Response({
+        "message": f"Đã {'gán quyền admin' if vai_tro_moi else 'gỡ quyền admin'} cho {nguoi_dung.email}",
+        "vai_tro_moi": nguoi_dung.is_staff
+    }, status=status.HTTP_200_OK)
