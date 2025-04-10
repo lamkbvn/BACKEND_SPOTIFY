@@ -2,6 +2,9 @@ from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, Permis
 from django.db import models
 from storages.backends.s3boto3 import S3Boto3Storage
 import re
+from mutagen.mp3 import MP3
+from mutagen.mp4 import MP4
+
 
 class NguoiDungManager(BaseUserManager):
     """Quản lý người dùng tùy chỉnh"""
@@ -105,6 +108,7 @@ class BaiHat(models.Model):
     loi_bai_hat = models.TextField(blank=True, null=True)
     thoi_luong = models.IntegerField()
     ngay_phat_hanh = models.DateField()
+    is_active = models.BooleanField(default=True)
 
     def save(self, *args, **kwargs):
         if self.file_bai_hat:
@@ -126,6 +130,18 @@ class BaiHat(models.Model):
             else:
                 # Nếu không phải .mp4 hoặc .mp3, có thể đặt một URL mặc định hoặc làm gì đó khác
                 self.duong_dan = f"https://spotifycloud.s3.amazonaws.com/{filename}"
+                
+            # 👉 Tính thời lượng file nhạc
+            try:
+                if self.file_bai_hat.name.endswith(".mp3"):
+                    audio = MP3(self.file_bai_hat)
+                    self.thoi_luong = int(audio.info.length)
+                elif self.file_bai_hat.name.endswith(".mp4"):
+                    audio = MP4(self.file_bai_hat)
+                    self.thoi_luong = int(audio.info.length)
+            except Exception as e:
+                print("Lỗi khi đọc thời lượng:", e)
+                self.thoi_luong = 0  # fallback nếu lỗi
 
         super().save(*args, **kwargs)
 

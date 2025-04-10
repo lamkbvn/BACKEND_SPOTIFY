@@ -25,6 +25,10 @@ class BaiHatSerializer(serializers.ModelSerializer):
     class Meta:
         model = BaiHat
         fields = '__all__'
+        extra_kwargs = {
+            'thoi_luong': {'required': False},
+            "is_active": {"default": True}
+        }
 
 class BaiHatTrongDanhSachSerializer(serializers.ModelSerializer):
     class Meta:
