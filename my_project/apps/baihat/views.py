@@ -336,3 +336,38 @@ def thong_ke_bai_hat_view(request):
     nam = request.GET.get('nam', datetime.now().year)  # Mặc định là năm hiện tại
     du_lieu = thong_ke_bai_hat_theo_thang(int(nam))
     return JsonResponse(du_lieu, safe=False)
+
+
+from django.core.paginator import Paginator
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def get_bai_hat_pagination(request):
+    # Lấy tham số từ request
+    page = int(request.GET.get('page', 0))
+    size = int(request.GET.get('size', 10))
+    search_query = request.GET.get('search', '').strip()  # Lấy từ khóa tìm kiếm
+
+    # Lọc danh sách bài hát nếu có từ khóa tìm kiếm
+    if search_query:
+        nghesi_list = BaiHat.objects.filter(ten_bai_hat__icontains=search_query)
+    else:
+        nghesi_list = BaiHat.objects.all()
+
+    # Áp dụng phân trang
+    paginator = Paginator(nghesi_list, size)
+    total_pages = paginator.num_pages
+
+    try:
+        nghesi_page = paginator.page(page + 1)  # Django page index bắt đầu từ 1
+    except:
+        return Response({"message": "Page out of range"}, status=status.HTTP_404_NOT_FOUND)
+
+    serializer = BaiHatSerializer(nghesi_page, many=True)
+
+    return Response({
+        "page": page,
+        "size": size,
+        "total_pages": total_pages,
+        "total_items": paginator.count,
+        "data": serializer.data
+    }, status=status.HTTP_200_OK)
