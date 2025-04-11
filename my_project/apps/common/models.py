@@ -106,6 +106,7 @@ class BaiHat(models.Model):
     file_bai_hat = models.FileField(upload_to='songs/', storage=S3Boto3Storage(), null=True, blank=True)
     duong_dan = models.URLField(blank=True, null=True)  # URL cố định không hết hạn
     loi_bai_hat = models.TextField(blank=True, null=True)
+    url_image = models.TextField(blank=True, null=True)
     thoi_luong = models.IntegerField()
     ngay_phat_hanh = models.DateField()
     is_active = models.BooleanField(default=True)
