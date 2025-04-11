@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import them_album, get_albums, get_album_by_id, update_album, delete_album, get_album_phan_trang, create_album, get_albums_by_user
+from .views import them_album, get_albums, get_album_by_id, update_album, delete_album, get_album_phan_trang, create_album, get_albums_by_user, get_album_cho_duyet_co_nguoi_dung
 
 urlpatterns = [
     path("", get_albums, name="get_albums"),
@@ -12,6 +12,7 @@ urlpatterns = [
     
     path('create/', create_album, name='create_album'),
     path("user/<int:user_id>/", get_albums_by_user, name="get_albums_by_user"),
-    
+    path("albumpending/", get_album_cho_duyet_co_nguoi_dung, name="get_album_cho_duyet_co_nguoi_dung"),
+   
     
 ]

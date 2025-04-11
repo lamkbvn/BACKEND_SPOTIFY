@@ -21,45 +21,53 @@ import tempfile
 import asyncio
 import requests
 
-
+#thêm bài hát với  'trang_thai_duyet': 'pending'
 @api_view(['POST'])
-@permission_classes([IsAuthenticated])
+@permission_classes([AllowAny])
 def upload_song(request):
-    user = request.user
-    try:
-        nghe_si = NgheSi.objects.get(nguoi_dung=user)
-    except NgheSi.DoesNotExist:
-        return Response({"error": "Bạn không phải là nghệ sĩ!"}, status=status.HTTP_403_FORBIDDEN)
+    nghe_si_id = request.data.get('nghe_si') or request.data.get('nghe_si_id')
+    if not nghe_si_id:
+        return Response({"error": "Thiếu thông tin nghệ sĩ!"}, status=status.HTTP_400_BAD_REQUEST)
 
-    # Tạo dữ liệu cho serializer mà không sử dụng request.data.copy()
     data = {
         'ten_bai_hat': request.data.get('ten_bai_hat'),
         'the_loai': request.data.get('the_loai'),
         'loi_bai_hat': request.data.get('loi_bai_hat', ''),
         'thoi_luong': request.data.get('thoi_luong'),
         'ngay_phat_hanh': request.data.get('ngay_phat_hanh'),
-        'album': request.data.get('album', None),  # Nếu không có album, để là None
-        'nghe_si': nghe_si.nghe_si_id,
+        'album': request.data.get('album', None),
+        'nghe_si': int(nghe_si_id),
         'trang_thai_duyet': 'pending'
     }
 
-    # Xử lý file upload
-    if 'file_bai_hat' in request.FILES:
-        data['file_bai_hat'] = request.FILES['file_bai_hat']
-    else:
+    if 'file_bai_hat' not in request.FILES:
         return Response({"error": "Vui lòng cung cấp file bài hát!"}, status=status.HTTP_400_BAD_REQUEST)
+
+    data['file_bai_hat'] = request.FILES['file_bai_hat']
 
     serializer = BaiHatSerializer(data=data)
     if serializer.is_valid():
         song = serializer.save()
-        # Update the album's status if the song is part of an album
         if song.album:
             song.album.update_trang_thai_duyet()
-        return Response(
-            {"message": "Bài hát đã được tải lên và đang chờ duyệt!", "data": serializer.data},
-            status=status.HTTP_201_CREATED
-        )
+        return Response({
+            "message": "Bài hát đã được tải lên và đang chờ duyệt!",
+            "data": serializer.data
+        }, status=status.HTTP_201_CREATED)
+
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+# lấy bài hát theo album
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def get_bai_hat_theo_album(request, album_id):
+    try:
+        bai_hats = BaiHat.objects.filter(album__album_id=album_id)
+        serializer = BaiHatSerializer(bai_hats, many=True)
+        return Response({"danh_sach_bai_hat": serializer.data}, status=status.HTTP_200_OK)
+    except Exception as e:
+        return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @api_view(['PUT'])
 @permission_classes([AllowAny]) #thay đổi thành IsAdminUser để tăng tín bảo mật
@@ -406,3 +414,38 @@ def thong_ke_bai_hat_view(request):
     nam = request.GET.get('nam', datetime.now().year)  # Mặc định là năm hiện tại
     du_lieu = thong_ke_bai_hat_theo_thang(int(nam))
     return JsonResponse(du_lieu, safe=False)
+
+
+from django.core.paginator import Paginator
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def get_bai_hat_pagination(request):
+    # Lấy tham số từ request
+    page = int(request.GET.get('page', 0))
+    size = int(request.GET.get('size', 10))
+    search_query = request.GET.get('search', '').strip()  # Lấy từ khóa tìm kiếm
+
+    # Lọc danh sách bài hát nếu có từ khóa tìm kiếm
+    if search_query:
+        nghesi_list = BaiHat.objects.filter(ten_bai_hat__icontains=search_query)
+    else:
+        nghesi_list = BaiHat.objects.all()
+
+    # Áp dụng phân trang
+    paginator = Paginator(nghesi_list, size)
+    total_pages = paginator.num_pages
+
+    try:
+        nghesi_page = paginator.page(page + 1)  # Django page index bắt đầu từ 1
+    except:
+        return Response({"message": "Page out of range"}, status=status.HTTP_404_NOT_FOUND)
+
+    serializer = BaiHatSerializer(nghesi_page, many=True)
+
+    return Response({
+        "page": page,
+        "size": size,
+        "total_pages": total_pages,
+        "total_items": paginator.count,
+        "data": serializer.data
+    }, status=status.HTTP_200_OK)
