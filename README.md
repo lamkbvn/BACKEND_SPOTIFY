@@ -32,7 +32,7 @@
 
 - **Django 5** + **Django REST Framework**: Xây dựng API backend.
 - **Django Channels** + **Daphne**: Hỗ trợ tính năng realtime (chat, thông báo).
-- **MySQL / PostgreSQL**: Cơ sở dữ liệu chính.
+- **MySQL**: Cơ sở dữ liệu chính.
 - **Cloudinary + AWS S3**: Lưu trữ ảnh và file âm thanh.
 
 
