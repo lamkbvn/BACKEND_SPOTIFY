@@ -61,14 +61,20 @@ class NguoiDung(AbstractBaseUser, PermissionsMixin):
 
 
 class NgheSi(models.Model):
-    nghe_si_id = models.BigAutoField(primary_key=True)  # Khóa chính
-    ten_nghe_si = models.CharField(max_length=255, unique=True)  # Tên nghệ sĩ
-    tieu_su = models.TextField(blank=True, null=True)  # Thông tin về nghệ sĩ
-    anh_dai_dien = models.URLField(blank=True, null=True)  # Ảnh đại diện nghệ sĩ
+    nghe_si_id = models.BigAutoField(primary_key=True)
+    nguoi_dung = models.ForeignKey(
+        NguoiDung,
+        on_delete=models.CASCADE,
+        related_name="cac_nghe_si",  # Đổi tên để tránh nhầm lẫn
+        null=True,
+        db_column="nguoi_dung_id"
+    )
+    ten_nghe_si = models.CharField(max_length=255, unique=True)
+    tieu_su = models.TextField(blank=True, null=True)
+    anh_dai_dien = models.URLField(blank=True, null=True)
     ngay_sinh = models.DateField(blank=True, null=True)
     quoc_gia = models.CharField(max_length=100, blank=True, null=True)
     is_active = models.BooleanField(default=True)
-
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -89,9 +95,27 @@ class Album(models.Model):
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    trang_thai_duyet = models.CharField(
+        max_length=20,
+        choices=[('pending', 'Chờ duyệt'), ('approved', 'Đã duyệt'), ('rejected', 'Bị từ chối')],
+        default='pending'
+    )
 
     def __str__(self):
         return f"{self.ten_album} - {self.nghe_si.ten_nghe_si}"
+    
+    def update_trang_thai_duyet(self):
+        """Cập nhật trạng thái duyệt của album dựa trên trạng thái của các bài hát."""
+        bai_hats = self.bai_hat.all()  # Lấy tất cả bài hát trong album
+        if not bai_hats.exists():  # Nếu album không có bài hát
+            self.trang_thai_duyet = 'pending'
+        elif all(bai_hat.trang_thai_duyet == 'approved' for bai_hat in bai_hats):  # Nếu tất cả bài hát đều approved
+            self.trang_thai_duyet = 'approved'
+        elif any(bai_hat.trang_thai_duyet == 'rejected' for bai_hat in bai_hats):  # Nếu có bài hát bị rejected
+            self.trang_thai_duyet = 'rejected'
+        else:  # Nếu có bài hát vẫn đang pending
+            self.trang_thai_duyet = 'pending'
+        self.save()
 
 
 class BaiHat(models.Model):
@@ -105,6 +129,12 @@ class BaiHat(models.Model):
     loi_bai_hat = models.TextField(blank=True, null=True)
     thoi_luong = models.IntegerField()
     ngay_phat_hanh = models.DateField()
+    trang_thai_duyet = models.CharField(
+        max_length=20,
+        choices=[('pending', 'Chờ duyệt'), ('approved', 'Đã duyệt'), ('rejected', 'Bị từ chối')],
+        default='pending'
+    )
+   
 
     def save(self, *args, **kwargs):
         if self.file_bai_hat:
@@ -128,6 +158,10 @@ class BaiHat(models.Model):
                 self.duong_dan = f"https://spotifycloud.s3.amazonaws.com/{filename}"
 
         super().save(*args, **kwargs)
+        
+        # Cập nhật trạng thái duyệt của album nếu bài hát thuộc album
+        if self.album:
+            self.album.update_trang_thai_duyet()
 
 
     def __str__(self):

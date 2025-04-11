@@ -1,8 +1,8 @@
 from rest_framework import status
 from rest_framework.response import Response
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import IsAuthenticated, IsAdminUser, AllowAny
 from rest_framework.decorators import api_view, permission_classes
-from ..common.models import BaiHat
+from ..common.models import BaiHat, NgheSi
 from ..common.serializers import BaiHatSerializer, AlbumSerializer
 
 from django.core.files.storage import FileSystemStorage
@@ -20,6 +20,76 @@ from shazamio import Shazam
 import tempfile
 import asyncio
 import requests
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def upload_song(request):
+    user = request.user
+    try:
+        nghe_si = NgheSi.objects.get(nguoi_dung=user)
+    except NgheSi.DoesNotExist:
+        return Response({"error": "Bạn không phải là nghệ sĩ!"}, status=status.HTTP_403_FORBIDDEN)
+
+    # Tạo dữ liệu cho serializer mà không sử dụng request.data.copy()
+    data = {
+        'ten_bai_hat': request.data.get('ten_bai_hat'),
+        'the_loai': request.data.get('the_loai'),
+        'loi_bai_hat': request.data.get('loi_bai_hat', ''),
+        'thoi_luong': request.data.get('thoi_luong'),
+        'ngay_phat_hanh': request.data.get('ngay_phat_hanh'),
+        'album': request.data.get('album', None),  # Nếu không có album, để là None
+        'nghe_si': nghe_si.nghe_si_id,
+        'trang_thai_duyet': 'pending'
+    }
+
+    # Xử lý file upload
+    if 'file_bai_hat' in request.FILES:
+        data['file_bai_hat'] = request.FILES['file_bai_hat']
+    else:
+        return Response({"error": "Vui lòng cung cấp file bài hát!"}, status=status.HTTP_400_BAD_REQUEST)
+
+    serializer = BaiHatSerializer(data=data)
+    if serializer.is_valid():
+        song = serializer.save()
+        # Update the album's status if the song is part of an album
+        if song.album:
+            song.album.update_trang_thai_duyet()
+        return Response(
+            {"message": "Bài hát đã được tải lên và đang chờ duyệt!", "data": serializer.data},
+            status=status.HTTP_201_CREATED
+        )
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['PUT'])
+@permission_classes([AllowAny]) #thay đổi thành IsAdminUser để tăng tín bảo mật
+def review_song(request, id):
+    try:
+        song = BaiHat.objects.get(pk=id)
+    except BaiHat.DoesNotExist:
+        return Response({"error": "Không tìm thấy bài hát!"}, status=status.HTTP_404_NOT_FOUND)
+
+    trang_thai_duyet = request.data.get('trang_thai_duyet')
+    if trang_thai_duyet not in ['approved', 'rejected']:
+        return Response({"error": "Trạng thái duyệt không hợp lệ!"}, status=status.HTTP_400_BAD_REQUEST)
+
+    song.trang_thai_duyet = trang_thai_duyet
+    song.save()
+
+    # Update the album's status if the song is part of an album
+    if song.album:
+        song.album.update_trang_thai_duyet()
+
+    return Response({"message": f"Bài hát đã được {trang_thai_duyet}!"}, status=status.HTTP_200_OK)
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def get_baihat_for_album(request):
+    bai_hats = BaiHat.objects.all()
+    if not request.user.is_staff:  # If not admin, only show approved songs
+        bai_hats = bai_hats.filter(trang_thai_duyet='approved')
+    serializer = BaiHatSerializer(bai_hats, many=True)
+    return Response(serializer.data, status=status.HTTP_200_OK)
 
 @api_view(['POST'])
 def sync_lyrics(request):
