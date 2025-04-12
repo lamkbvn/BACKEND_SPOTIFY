@@ -8,6 +8,10 @@ from .models import BangXepHangBaiHat
 from ..common.models import BaiHat, BaiHatTrongDanhSach
 
 class NguoiDungSerializer(serializers.ModelSerializer):
+    avatar_url = serializers.URLField(
+        required=False,
+        default='https://cdn-icons-png.flaticon.com/512/149/149071.png'
+    )
     class Meta:
         model = NguoiDung
         fields = '__all__'  # Lấy tất cả các trường của model
@@ -25,6 +29,10 @@ class BaiHatSerializer(serializers.ModelSerializer):
     class Meta:
         model = BaiHat
         fields = '__all__'
+        extra_kwargs = {
+            'thoi_luong': {'required': False},
+            "is_active": {"default": True}
+        }
 
 class BaiHatTrongDanhSachSerializer(serializers.ModelSerializer):
     class Meta:

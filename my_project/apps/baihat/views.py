@@ -1,8 +1,8 @@
 from rest_framework import status
 from rest_framework.response import Response
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import IsAuthenticated, IsAdminUser, AllowAny
 from rest_framework.decorators import api_view, permission_classes
-from ..common.models import BaiHat
+from ..common.models import BaiHat, NgheSi
 from ..common.serializers import BaiHatSerializer, AlbumSerializer
 
 from django.core.files.storage import FileSystemStorage
@@ -20,6 +20,84 @@ from shazamio import Shazam
 import tempfile
 import asyncio
 import requests
+
+#thêm bài hát với  'trang_thai_duyet': 'pending'
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def upload_song(request):
+    nghe_si_id = request.data.get('nghe_si') or request.data.get('nghe_si_id')
+    if not nghe_si_id:
+        return Response({"error": "Thiếu thông tin nghệ sĩ!"}, status=status.HTTP_400_BAD_REQUEST)
+
+    data = {
+        'ten_bai_hat': request.data.get('ten_bai_hat'),
+        'the_loai': request.data.get('the_loai'),
+        'loi_bai_hat': request.data.get('loi_bai_hat', ''),
+        'thoi_luong': request.data.get('thoi_luong'),
+        'ngay_phat_hanh': request.data.get('ngay_phat_hanh'),
+        'album': request.data.get('album', None),
+        'nghe_si': int(nghe_si_id),
+        'trang_thai_duyet': 'pending'
+    }
+
+    if 'file_bai_hat' not in request.FILES:
+        return Response({"error": "Vui lòng cung cấp file bài hát!"}, status=status.HTTP_400_BAD_REQUEST)
+
+    data['file_bai_hat'] = request.FILES['file_bai_hat']
+
+    serializer = BaiHatSerializer(data=data)
+    if serializer.is_valid():
+        song = serializer.save()
+        if song.album:
+            song.album.update_trang_thai_duyet()
+        return Response({
+            "message": "Bài hát đã được tải lên và đang chờ duyệt!",
+            "data": serializer.data
+        }, status=status.HTTP_201_CREATED)
+
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+# lấy bài hát theo album
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def get_bai_hat_theo_album(request, album_id):
+    try:
+        bai_hats = BaiHat.objects.filter(album__album_id=album_id)
+        serializer = BaiHatSerializer(bai_hats, many=True)
+        return Response({"danh_sach_bai_hat": serializer.data}, status=status.HTTP_200_OK)
+    except Exception as e:
+        return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['PUT'])
+@permission_classes([AllowAny]) #thay đổi thành IsAdminUser để tăng tín bảo mật
+def review_song(request, id):
+    try:
+        song = BaiHat.objects.get(pk=id)
+    except BaiHat.DoesNotExist:
+        return Response({"error": "Không tìm thấy bài hát!"}, status=status.HTTP_404_NOT_FOUND)
+
+    trang_thai_duyet = request.data.get('trang_thai_duyet')
+    if trang_thai_duyet not in ['approved', 'rejected']:
+        return Response({"error": "Trạng thái duyệt không hợp lệ!"}, status=status.HTTP_400_BAD_REQUEST)
+
+    song.trang_thai_duyet = trang_thai_duyet
+    song.save()
+
+    # Update the album's status if the song is part of an album
+    if song.album:
+        song.album.update_trang_thai_duyet()
+
+    return Response({"message": f"Bài hát đã được {trang_thai_duyet}!"}, status=status.HTTP_200_OK)
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def get_baihat_for_album(request):
+    bai_hats = BaiHat.objects.all()
+    if not request.user.is_staff:  # If not admin, only show approved songs
+        bai_hats = bai_hats.filter(trang_thai_duyet='approved')
+    serializer = BaiHatSerializer(bai_hats, many=True)
+    return Response(serializer.data, status=status.HTTP_200_OK)
 
 @api_view(['POST'])
 def sync_lyrics(request):
@@ -336,3 +414,38 @@ def thong_ke_bai_hat_view(request):
     nam = request.GET.get('nam', datetime.now().year)  # Mặc định là năm hiện tại
     du_lieu = thong_ke_bai_hat_theo_thang(int(nam))
     return JsonResponse(du_lieu, safe=False)
+
+
+from django.core.paginator import Paginator
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def get_bai_hat_pagination(request):
+    # Lấy tham số từ request
+    page = int(request.GET.get('page', 0))
+    size = int(request.GET.get('size', 10))
+    search_query = request.GET.get('search', '').strip()  # Lấy từ khóa tìm kiếm
+
+    # Lọc danh sách bài hát nếu có từ khóa tìm kiếm
+    if search_query:
+        nghesi_list = BaiHat.objects.filter(ten_bai_hat__icontains=search_query)
+    else:
+        nghesi_list = BaiHat.objects.all()
+
+    # Áp dụng phân trang
+    paginator = Paginator(nghesi_list, size)
+    total_pages = paginator.num_pages
+
+    try:
+        nghesi_page = paginator.page(page + 1)  # Django page index bắt đầu từ 1
+    except:
+        return Response({"message": "Page out of range"}, status=status.HTTP_404_NOT_FOUND)
+
+    serializer = BaiHatSerializer(nghesi_page, many=True)
+
+    return Response({
+        "page": page,
+        "size": size,
+        "total_pages": total_pages,
+        "total_items": paginator.count,
+        "data": serializer.data
+    }, status=status.HTTP_200_OK)

@@ -2,6 +2,9 @@ from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, Permis
 from django.db import models
 from storages.backends.s3boto3 import S3Boto3Storage
 import re
+from mutagen.mp3 import MP3
+from mutagen.mp4 import MP4
+
 
 class NguoiDungManager(BaseUserManager):
     """Quản lý người dùng tùy chỉnh"""
@@ -33,7 +36,7 @@ class NguoiDung(AbstractBaseUser, PermissionsMixin):
     so_dien_thoai = models.CharField(max_length=15, blank=True, null=False)
     ten_hien_thi = models.CharField(max_length=100 , null=False)
     gioi_tinh = models.CharField(max_length=10, choices=[('male', 'Nam'), ('female', 'Nữ')], default='male')
-    avatar_url = models.URLField(blank=True, null=True)
+    avatar_url = models.URLField(blank=True, null=True )
     ngay_sinh = models.DateField(blank=True, null=False)
     quoc_gia = models.CharField(max_length=50, blank=True, null=True)
     la_premium = models.BooleanField(default=False)
@@ -61,14 +64,20 @@ class NguoiDung(AbstractBaseUser, PermissionsMixin):
 
 
 class NgheSi(models.Model):
-    nghe_si_id = models.BigAutoField(primary_key=True)  # Khóa chính
-    ten_nghe_si = models.CharField(max_length=255, unique=True)  # Tên nghệ sĩ
-    tieu_su = models.TextField(blank=True, null=True)  # Thông tin về nghệ sĩ
-    anh_dai_dien = models.URLField(blank=True, null=True)  # Ảnh đại diện nghệ sĩ
+    nghe_si_id = models.BigAutoField(primary_key=True)
+    nguoi_dung = models.ForeignKey(
+        NguoiDung,
+        on_delete=models.CASCADE,
+        related_name="cac_nghe_si",  # Đổi tên để tránh nhầm lẫn
+        null=True,
+        db_column="nguoi_dung_id"
+    )
+    ten_nghe_si = models.CharField(max_length=255, unique=True)
+    tieu_su = models.TextField(blank=True, null=True)
+    anh_dai_dien = models.URLField(blank=True, null=True)
     ngay_sinh = models.DateField(blank=True, null=True)
     quoc_gia = models.CharField(max_length=100, blank=True, null=True)
     is_active = models.BooleanField(default=True)
-
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -89,9 +98,27 @@ class Album(models.Model):
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    trang_thai_duyet = models.CharField(
+        max_length=20,
+        choices=[('pending', 'Chờ duyệt'), ('approved', 'Đã duyệt'), ('rejected', 'Bị từ chối')],
+        default='approved'
+    )
 
     def __str__(self):
         return f"{self.ten_album} - {self.nghe_si.ten_nghe_si}"
+    
+    def update_trang_thai_duyet(self):
+        """Cập nhật trạng thái duyệt của album dựa trên trạng thái của các bài hát."""
+        bai_hats = self.bai_hat.all()  # Lấy tất cả bài hát trong album
+        if not bai_hats.exists():  # Nếu album không có bài hát
+            self.trang_thai_duyet = 'pending'
+        elif all(bai_hat.trang_thai_duyet == 'approved' for bai_hat in bai_hats):  # Nếu tất cả bài hát đều approved
+            self.trang_thai_duyet = 'approved'
+        elif any(bai_hat.trang_thai_duyet == 'rejected' for bai_hat in bai_hats):  # Nếu có bài hát bị rejected
+            self.trang_thai_duyet = 'rejected'
+        else:  # Nếu có bài hát vẫn đang pending
+            self.trang_thai_duyet = 'pending'
+        self.save()
 
 
 class BaiHat(models.Model):
@@ -103,8 +130,16 @@ class BaiHat(models.Model):
     file_bai_hat = models.FileField(upload_to='songs/', storage=S3Boto3Storage(), null=True, blank=True)
     duong_dan = models.URLField(blank=True, null=True)  # URL cố định không hết hạn
     loi_bai_hat = models.TextField(blank=True, null=True)
+    url_image = models.TextField(blank=True, null=True)
     thoi_luong = models.IntegerField()
     ngay_phat_hanh = models.DateField()
+    is_active = models.BooleanField(default=True)
+    trang_thai_duyet = models.CharField(
+        max_length=20,
+        choices=[('pending', 'Chờ duyệt'), ('approved', 'Đã duyệt'), ('rejected', 'Bị từ chối')],
+        default='approved'
+    )
+   
 
     def save(self, *args, **kwargs):
         if self.file_bai_hat:
@@ -126,8 +161,24 @@ class BaiHat(models.Model):
             else:
                 # Nếu không phải .mp4 hoặc .mp3, có thể đặt một URL mặc định hoặc làm gì đó khác
                 self.duong_dan = f"https://spotifycloud.s3.amazonaws.com/{filename}"
+                
+            # 👉 Tính thời lượng file nhạc
+            try:
+                if self.file_bai_hat.name.endswith(".mp3"):
+                    audio = MP3(self.file_bai_hat)
+                    self.thoi_luong = int(audio.info.length)
+                elif self.file_bai_hat.name.endswith(".mp4"):
+                    audio = MP4(self.file_bai_hat)
+                    self.thoi_luong = int(audio.info.length)
+            except Exception as e:
+                print("Lỗi khi đọc thời lượng:", e)
+                self.thoi_luong = 0  # fallback nếu lỗi
 
         super().save(*args, **kwargs)
+        
+        # Cập nhật trạng thái duyệt của album nếu bài hát thuộc album
+        if self.album:
+            self.album.update_trang_thai_duyet()
 
 
     def __str__(self):
