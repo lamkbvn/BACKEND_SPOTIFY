@@ -30,6 +30,9 @@ def them_danhsachphat_theo_cam_xuc(request):
     # Lọc bài hát theo cảm xúc - chỉ lấy phần cảm xúc trong tuple
     bai_hats = BaiHat.objects.filter(cam_xuc__contains=cam_xuc)
 
+    # Lấy ngẫu nhiên 10 bài hát từ danh sách đã lọc
+    bai_hats_random = bai_hats.order_by('?')[:10]
+
     # Tạo playlist mới
     playlist = DanhSachPhat.objects.create(
         nguoi_dung_id_id=nguoi_dung_id,
@@ -40,7 +43,7 @@ def them_danhsachphat_theo_cam_xuc(request):
     total_duration = 0  # Biến để tính tổng thời gian của playlist
 
     # Thêm bài hát vào playlist 
-    for bai_hat in bai_hats:
+    for bai_hat in bai_hats_random:
         # Kiểm tra xem bài hát đã có trong playlist chưa
         if not BaiHatTrongDanhSach.objects.filter(danh_sach_phat=playlist, bai_hat=bai_hat).exists():
             # Thêm bài hát vào danh sách phát
