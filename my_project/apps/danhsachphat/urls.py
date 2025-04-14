@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import them_danhsachphat, get_danhsachphat, get_danhsachphat_by_id, update_danhsachphat, delete_danhsachphat, get_danhsachphat_by_user, get_so_luong_dsp
+from .views import them_danhsachphat, get_danhsachphat, get_danhsachphat_by_id, update_danhsachphat, delete_danhsachphat, get_danhsachphat_by_user, get_so_luong_dsp, them_danhsachphat_theo_cam_xuc
 
 urlpatterns = [
     path('', get_danhsachphat, name='get_danhsachphat'),
@@ -8,5 +8,6 @@ urlpatterns = [
     path('them/', them_danhsachphat, name='them_danhsachphat'),
     path('capnhat/<int:id>/', update_danhsachphat, name='update_danhsachphat'),
     path('xoa/<int:id>/', delete_danhsachphat, name='delete_danhsachphat'),
-    path('api/get-so-luong-dsp/', get_so_luong_dsp, name='get_so_luong_dsp')
+    path('api/get-so-luong-dsp/', get_so_luong_dsp, name='get_so_luong_dsp'),
+    path('them_theo_cam_xuc/', them_danhsachphat_theo_cam_xuc, name='them_danhsachphat_theo_cam_xuc'),
 ]
