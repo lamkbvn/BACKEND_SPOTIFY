@@ -37,9 +37,9 @@ def analyze_song_emotion(lyrics):
         elif scores['compound'] <= -0.5:
             return 'buon'
         elif scores['pos'] > scores['neg']:
-            return 'tinh_yeu'
+            return 'thu gian'
         else:
-            return 'soi_dong'
+            return 'soi dong'
         
 
 

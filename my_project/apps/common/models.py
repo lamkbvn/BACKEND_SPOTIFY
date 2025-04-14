@@ -150,7 +150,7 @@ class BaiHat(models.Model):
             ('vui', 'Vui'),
             ('buon', 'Buồn'),
             ('soi_dong', 'Sôi động'),
-            ('tinh_yeu', 'Tình yêu'),
+            ('thu gian', 'Thư giãn'),
           
         ],
         blank=True,
@@ -249,8 +249,8 @@ class DanhSachPhat(models.Model):
         choices=[
             ('vui', 'Vui'),
             ('buon', 'Buồn'),
-            ('soi_dong', 'Sôi động'),
-            ('tinh_yeu', 'Tình yêu'),
+            ('soi dong', 'Sôi động'),
+            ('thu gian', 'Thư giãn'),
             
         ],
         blank=True,

@@ -13,10 +13,10 @@ class BERTEmotionAnalyzer:
         mapping = {
             'joy': 'vui',
             'sadness': 'buon',
-            'anger': 'soi_dong',
-            'love': 'tinh_yeu',
+            'anger': 'soi dong',
+            'love': 'thu gian',
             'fear': 'buon',
-            'surprise': 'soi_dong',
+            'surprise': 'soi dong',
         }
         return mapping.get(label, None)
 
