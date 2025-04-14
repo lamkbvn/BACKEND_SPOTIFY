@@ -55,6 +55,15 @@ CORS_ALLOW_HEADERS = [
     "x-csrftoken",
 ]
 
+CORS_ALLOW_METHODS = [
+    "DELETE",
+    "GET",
+    "OPTIONS",
+    "PATCH",
+    "POST",
+    "PUT",  # phải có dòng này!
+]
+
 CSRF_TRUSTED_ORIGINS = [
      "http://localhost:5173",   # ✅ Cho phép domain frontend tránh lỗi CSRF
 ]
@@ -159,7 +168,6 @@ MIDDLEWARE = [
     'apps.nguoidung.middleware.JWTBlacklistMiddleware',
     'apps.nguoidung.middleware.TokenRefreshMiddleware',
     'apps.nguoidung.middleware.AttachTokenMiddleware',
-
 ]
 
 ROOT_URLCONF = 'my_project.urls'

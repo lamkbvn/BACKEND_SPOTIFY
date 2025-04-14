@@ -50,6 +50,10 @@ class LoaiBaiHatSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 class NgheSiSerializer(serializers.ModelSerializer):
+    anh_dai_dien = serializers.URLField(
+        required=False,
+        default='https://cdn-icons-png.flaticon.com/512/149/149071.png'
+    )
     class Meta:
         model = NgheSi
         fields = '__all__'

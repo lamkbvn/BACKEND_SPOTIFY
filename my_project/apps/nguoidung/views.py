@@ -99,7 +99,8 @@ def them_nguoi_dung(request):
 
 
 @api_view(['PUT'])
-# @permission_classes([IsAuthenticated])  # Chỉ người dùng đã đăng nhập mới có thể cập nhật
+@permission_classes([IsAuthenticated])
+@csrf_exempt
 def cap_nhat_nguoi_dung(request):
     nguoi_dung = request.user  # Lấy người dùng từ token
 
@@ -108,11 +109,11 @@ def cap_nhat_nguoi_dung(request):
     mat_khau_moi = request.data.get('password', None)
 
     if NguoiDung.objects.filter(email=email_moi).exclude(pk=nguoi_dung.nguoi_dung_id).exists():
-        return Response({"error": "Email đã được sử dụng bởi người dùng khác!"}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({"email": "Email đã được sử dụng bởi người dùng khác!"}, status=status.HTTP_400_BAD_REQUEST)
 
     if so_dien_thoai_moi and NguoiDung.objects.filter(so_dien_thoai=so_dien_thoai_moi).exclude(
             pk=nguoi_dung.nguoi_dung_id).exists():
-        return Response({"error": "Số điện thoại đã được sử dụng bởi người dùng khác!"}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({"sdt": "Số điện thoại đã được sử dụng bởi người dùng khác!"}, status=status.HTTP_400_BAD_REQUEST)
 
     # Nếu có mật khẩu mới, mã hóa trước khi cập nhật
     data_update = request.data.copy()
@@ -143,6 +144,10 @@ def login(request):
 
     if not check_password(password, nguoidung.password):  # Đảm bảo bạn lưu mật khẩu đã mã hóa trong DB
         return Response({'password': 'Sai mật khẩu'}, status=400)
+
+    if not nguoidung.is_active:
+        return Response({'email': 'Tài khoản đã bị khoá'}, status=403)
+
     # Tạo JWT token
     refresh = RefreshToken.for_user(nguoidung)
     access_token = str(refresh.access_token)
