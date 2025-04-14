@@ -2,10 +2,81 @@ from rest_framework import status
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.decorators import api_view, permission_classes
-from ..common.models import DanhSachPhat
+from ..common.models import DanhSachPhat, BaiHat, BaiHatTrongDanhSach
+from ..common.serializers import DanhSachPhatSerializer, BaiHatTrongDanhSachSerializer
+from django.core.files.uploadedfile import InMemoryUploadedFile
+import cloudinary.uploader
+
+
+from rest_framework import status
+from rest_framework.permissions import AllowAny
+from rest_framework.response import Response
+from rest_framework.decorators import api_view, permission_classes
+from ..common.models import DanhSachPhat, BaiHat, BaiHatTrongDanhSach
 from ..common.serializers import DanhSachPhatSerializer
 from django.core.files.uploadedfile import InMemoryUploadedFile
 import cloudinary.uploader
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def them_danhsachphat_theo_cam_xuc(request):
+    print("CHECKPOINT: Function được gọi")
+    cam_xuc = request.data.get('cam_xuc')  # Cảm xúc của playlist
+    nguoi_dung_id = request.data.get('nguoi_dung_id')  # ID người dùng
+
+    if not cam_xuc or not nguoi_dung_id:
+        return Response({"error": "Cảm xúc và người dùng phải được cung cấp."}, status=status.HTTP_400_BAD_REQUEST)
+
+    # Lọc bài hát theo cảm xúc - chỉ lấy phần cảm xúc trong tuple
+    bai_hats = BaiHat.objects.filter(cam_xuc__contains=cam_xuc)
+
+    # Tạo playlist mới
+    playlist = DanhSachPhat.objects.create(
+        nguoi_dung_id_id=nguoi_dung_id,
+        ten_danh_sach=f"Playlist {cam_xuc}",
+        cam_xuc=cam_xuc
+    )
+
+    total_duration = 0  # Biến để tính tổng thời gian của playlist
+
+    # Thêm bài hát vào playlist 
+    for bai_hat in bai_hats:
+        # Kiểm tra xem bài hát đã có trong playlist chưa
+        if not BaiHatTrongDanhSach.objects.filter(danh_sach_phat=playlist, bai_hat=bai_hat).exists():
+            # Thêm bài hát vào danh sách phát
+            BaiHatTrongDanhSach.objects.create(
+                danh_sach_phat=playlist,
+                bai_hat=bai_hat
+            )
+            # Cộng thời gian bài hát vào tổng thời gian playlist
+            total_duration += bai_hat.thoi_luong
+
+    # Cập nhật lại thời gian tổng của playlist
+    playlist.tong_thoi_luong = total_duration
+    playlist.save()
+
+    # Nếu có ảnh playlist được gửi, xử lý ảnh
+    anh_playlist = request.FILES.get('anh_danh_sach')
+    if anh_playlist:
+        try:
+            upload_result = cloudinary.uploader.upload(anh_playlist)
+            playlist.anh_danh_sach = upload_result['secure_url']
+            playlist.save()
+        except Exception as e:
+            return Response({"error": "Không thể tải ảnh lên Cloudinary."}, status=status.HTTP_400_BAD_REQUEST)
+
+    # Lấy danh sách bài hát trong playlist
+    bai_hats_in_playlist = BaiHatTrongDanhSach.objects.filter(danh_sach_phat=playlist)
+    bai_hat_serializer = BaiHatTrongDanhSachSerializer(bai_hats_in_playlist, many=True)  # Serialize bài hát trong playlist
+
+    # Trả về chi tiết playlist và các bài hát trong playlist
+    serializer = DanhSachPhatSerializer(playlist)
+    response_data = serializer.data
+    response_data['bai_hats'] = bai_hat_serializer.data  # Thêm thông tin bài hát vào phản hồi
+
+    return Response(response_data, status=status.HTTP_201_CREATED)
+
+
 
 
 @api_view(['POST'])

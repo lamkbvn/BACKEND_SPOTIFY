@@ -4,6 +4,9 @@ from storages.backends.s3boto3 import S3Boto3Storage
 import re
 from mutagen.mp3 import MP3
 from mutagen.mp4 import MP4
+from ..baihat.data_preprocessing import preprocess_text
+from ..baihat.services import analyze_song_emotion
+from googletrans import Translator
 
 
 class NguoiDungManager(BaseUserManager):
@@ -121,6 +124,8 @@ class Album(models.Model):
         self.save()
 
 
+
+
 class BaiHat(models.Model):
     bai_hat_id = models.BigAutoField(primary_key=True)
     ten_bai_hat = models.CharField(max_length=255)
@@ -139,30 +144,40 @@ class BaiHat(models.Model):
         choices=[('pending', 'Chờ duyệt'), ('approved', 'Đã duyệt'), ('rejected', 'Bị từ chối')],
         default='approved'
     )
-   
+    cam_xuc = models.CharField(
+        max_length=50,
+        choices=[
+            ('vui', 'Vui'),
+            ('buon', 'Buồn'),
+            ('soi_dong', 'Sôi động'),
+            ('tinh_yeu', 'Tình yêu'),
+          
+        ],
+        blank=True,
+        null=True,
+        help_text="Cảm xúc của bài hát"
+    )
 
     def save(self, *args, **kwargs):
         if self.file_bai_hat:
             filename = self.file_bai_hat.name
             filename = filename.replace(" ", "_")
-            
             # Loại bỏ các ký tự đặc biệt bằng regex
             filename = re.sub(r"[#;![\]+={}\^$&,()']", "", filename)
-            
+
             # Nếu tên file không bắt đầu với "songs/", thêm vào
             if not filename.startswith("songs/"):
                 filename = f"songs/{filename}"
-            
+
             # Kiểm tra phần mở rộng của file và thay đổi URL tương ứng
             if filename.endswith(".mp4"):
                 self.duong_dan = f"https://spotifycloud.s3.ap-southeast-2.amazonaws.com/{filename}"
             elif filename.endswith(".mp3"):
                 self.duong_dan = f"https://spotifycloud.s3.amazonaws.com/{filename}"
             else:
-                # Nếu không phải .mp4 hoặc .mp3, có thể đặt một URL mặc định hoặc làm gì đó khác
                 self.duong_dan = f"https://spotifycloud.s3.amazonaws.com/{filename}"
-                
-            # 👉 Tính thời lượng file nhạc
+
+            # Tính thời lượng file nhạc
             try:
                 if self.file_bai_hat.name.endswith(".mp3"):
                     audio = MP3(self.file_bai_hat)
@@ -174,15 +189,48 @@ class BaiHat(models.Model):
                 print("Lỗi khi đọc thời lượng:", e)
                 self.thoi_luong = 0  # fallback nếu lỗi
 
+        # 2. Xử lý lời bài hát
+        if self.loi_bai_hat:
+            # Kiểm tra ngôn ngữ lời bài hát và dịch nếu cần
+            translator = Translator()
+
+            # Dịch lời bài hát sang tiếng Anh nếu là tiếng Việt
+            if self.is_vietnamese(self.loi_bai_hat):
+                self.loi_bai_hat = translator.translate(self.loi_bai_hat, src='vi', dest='en').text
+
+            # Xử lý lời bài hát sau khi dịch
+            self.loi_bai_hat_xu_li = preprocess_text(self.loi_bai_hat)
+
+        # 3. Phân tích cảm xúc nếu chưa có
+        if not self.cam_xuc and self.loi_bai_hat_xu_li:
+            self.cam_xuc = analyze_song_emotion(self.loi_bai_hat_xu_li)
+
         super().save(*args, **kwargs)
-        
+
         # Cập nhật trạng thái duyệt của album nếu bài hát thuộc album
         if self.album:
             self.album.update_trang_thai_duyet()
 
+    def is_vietnamese(self, text):
+        """
+        Kiểm tra xem lời bài hát có phải tiếng Việt hay không.
+        Đây có thể là cách kiểm tra cơ bản, bạn có thể mở rộng logic.
+        """
+        # Một cách đơn giản là kiểm tra xem văn bản có chứa ký tự tiếng Việt không
+        vietnamese_chars = "áàảãạăắằẳẵặâấầẩẫậéèẻẽẹêếềểễệíìỉĩịóòỏõọôốồổỗộơớờởỡợúùủũụưứừửữựýỳỷỹỵđ"
+        return any(c in vietnamese_chars for c in text)
 
     def __str__(self):
         return f"{self.ten_bai_hat} - {self.nghe_si.ten_nghe_si}"
+
+    
+    @staticmethod
+    def update_song_emotions():
+        for baihat in BaiHat.objects.all():
+            if baihat.loi_bai_hat and not baihat.cam_xuc:
+                baihat.cam_xuc = analyze_song_emotion(baihat.loi_bai_hat)
+                baihat.save()
+
 
 
 class DanhSachPhat(models.Model):
@@ -196,7 +244,19 @@ class DanhSachPhat(models.Model):
     so_thu_tu = models.IntegerField(null=True)
     anh_danh_sach = models.URLField(default="http://localhost:5173/uifaces-popular-image%20(1).jpg")
     so_nguoi_theo_doi = models.IntegerField(default=0)
-
+    cam_xuc = models.CharField(
+        max_length=50,
+        choices=[
+            ('vui', 'Vui'),
+            ('buon', 'Buồn'),
+            ('soi_dong', 'Sôi động'),
+            ('tinh_yeu', 'Tình yêu'),
+            
+        ],
+        blank=True,
+        null=True,
+        help_text="Cảm xúc của bài hát"
+    )
     class Meta:
         ordering = ['so_thu_tu']  # Mặc định sắp xếp theo thứ tự
 
